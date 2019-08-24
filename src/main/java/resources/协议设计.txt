@@ -1,0 +1,134 @@
+
+                --------------------------
+                | Encodable              |
+                |  +int encodedLength()  |
+                |  +void encode(ByteBuf) |
+                ------------+---------+---
+                           /|\       /|\
+                            |         |
+                            |         |
+                            |         --------------------------------------
+                            |                                              |
+                            |<interface>                                   |<class>
+                -----------------------------            ----------------------------------------
+                | Message                   |            | Enum Type                            |
+                |  +Type type()             |----------->*  +final byte id;                     |
+                |  +ManagedBuffer body()    |            |  +byte id()                          |
+                |  +boolean isBodyInFrame() |            |  +int encodedLength(){return 1}      |
+                -------+--------+----+-------            |  +void encode(buf){buf.writeByte(id)}|
+                      /|\      /|\  /|\                  |  +static Type decode(ByteBuf)        |
+                       |        |    |                   ----------------------------------------
+                       |        |    |-------------------------------------------
+                       |<class> |------------------------                       |
+           ---------------------------------            |标记请求报文的接口        |标记响应报文的接口
+           | AbstractMessage               |     ------------------     -------------------
+           |  +final ManagedBuffer body;   |     | RequestMessage |     | ResponseMessage |
+           |  +final boolean isBodyInFrame;|     |                |     |                 |
+           --+------------------------------     --+---------------     ----------+--------
+            /|\            /|\                    /|\                            /|\
+             |              |                      |                              |
+             |              |                      |                              |
+      |-------              -----------------------#------------------------------#-------------
+      |       |------------------------------------|             |                             |
+----------------------------------------             -----------------------------             |
+| OneWayMessage                        |             | AbstractResponseMessage   |             |
+| +type:Type.OneWayMessage             |             |  +  createFailureResponse |             |
+| +static OneWauMessage decode(ByteBuf)|             |                           |             |
+----------------------------------------             -----------*-----------------             |
+                                                               /|\                             |
+                                                                |                              |
+-------------------------------------      --------------------------------------   ---------------------------
+| RpcRequest                        |      | RpcResponse                        |-->| RpcFailure              |
+| +type:Type.RpcRequest             |      | +type:Type.RpcResponse             |   |  + long requestId       |
+| +static RpcRequest decode(ByteBuf)|      | +static RpcResponse decode(ByteBuf)|   |  + String error         |
+-------------------------------------      --------------------------------------   ---------------------------
+
+-------------------------------------      --------------------------------------   ---------------------------
+| StreamRequest                     |      | StreamResponse                     |-->| StreamFailure           |
+| + streamId                        |      | +streamId                          |   |                         |
+| +type:Type.StreamRequest          |      | +type:Type.StreamResponse          |   |  + long streamId        |
+| +static StreamRequest decode()    |      | +static StreamResponse decode()    |   |  + String error         |
+-------------------------------------      --------------------------------------   ---------------------------
+
+-------------------------------------      --------------------------------------   ---------------------------
+| ChunkFetchRequest                 |      | ChunkFetchSuccess                  |-->| ChunkFetchFailure       |
+| + streamChunkId                   |      | + streamChunkId                    |   |                         |
+| +type:Type.ChunkFetchRequest      |      | +type:Type.ChunkFetchSuccess       |   |  + long streamChunkId   |
+| +static ChunkFetchRequest decode()|      | +static ChunkFetchSuccess decode() |   |  + String error         |
+-------------------------------------      --------------------------------------   ---------------------------
+
+
+//消息类型定义
+public static enum Type implements Encodable {
+    ChunkFetchRequest(0), ChunkFetchSuccess(1), ChunkFetchFailure(2),
+    RpcRequest(3), RpcResponse(4), RpcFailure(5),
+    StreamRequest(6), StreamResponse(7), StreamFailure(8),
+    OneWayMessage(9), User(-1);
+}
+
+
+Message的编解码器
+
+帧格式如下：
+	---------------------------------
+	| Frame Len(8 bytes) | ByteBuf  |
+	---------------------------------
+						/           |
+				     /	            |
+				  /	                |
+			   /                    |
+			/                       |
+	        -------------------------
+	        | Header  | BodyInFrame |
+	        -------------------------
+	        \                        \
+			 ---------------------------------------------
+			 | Type(1 byte) | MsgInHeader  | BodyInFrame |
+			 ---------------------------------------------
+			 \                                           \
+			 --------------------------------------------------
+			 | Type(1 byte) | Len(4bytes) | msg | BodyInFrame |
+			 --------------------------------------------------
+
+根据Message.isBodyInFrame判断在编码时决定将Message.body放在什么地方。
+1、为了让实现网络大数据的通信，在数据较多时isBodyInFrame=true，以便利用零拷贝实现提高传输效率，此时会构建数据类型：MessageWithHeader(ByteBuf header, Object body, long bodyLength)
+2、当只是简单的RPC通信，只需要少量数据传输，此时将消息内存放在Header中即可，isBodyInFrame=false,
+
+------------------------------------                  ------------------------------------
+| MessageToMessageEncoder<Message> |                  |      TransportFrameDecoder       |
+---------------+--------------------                  ---------------+--------------------
+              /|\                                     ------------------------------------
+               |                                      | MessageToMessageDecoder<ByteBuf> |
+               |                                      ---------------+--------------------
+               |                       --------------               /|\
+               |                       | FileRegion |                |
+  ------------------------             ------+-------          ---------------------
+  | MessageEncoder       |                  /|\                | MessageEncoder    |
+  | +encode              |--------------     |                 | +decode           |
+  ------------------------             |     |                 ---------------------
+                                       |     |
+                                       |     |
+                               --------*------------
+                               | MessageWithHeader |
+                               ---------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

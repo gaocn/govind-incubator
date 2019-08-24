@@ -1,0 +1,65 @@
+                 --------------------------------------
+                 | Messagehandler<T extends Message>  |
+                 |  + void handle(T message)          |
+                 |  + void exceptionCaught(Throwable) |
+                 |  + void channelUnregistered()      |
+                 ---------+------------------+---------
+                         /|\                /|\
+                          |                  |
+                          |                  |
+                ----------|                  |---------------------
+   -------------|---------------          -------------------------|-----------------------
+   | TransporotRequestHander   |          |  TransportResponseHandler                     |
+   |  + Channel                |          |   + Channel                                   |
+   |  + TransportClient        |          |   + Map<StreamChunkId, ChunkReceivedCallback> |
+   |  + RpcHandler             |          |   + Map<Long, RpcResponseCallback>            |
+   |  + StreamManager          |          |   + Queue<StreamCallback>                     |
+   |  + processFetchRequest    |          |   + volatile boolean streamActive             |
+   |  + processStreamRequest   |          |   + AtomicLong timeOfLastRequestNs            |
+   |  + processRpcRequest      |          |   + addFetchRequest                           |
+   |  + processOneWayMessage   |          |   + removeFetchRequest                        |
+   |  + respond(Encodable res) |          |   + addRpcRequest                             |
+   -----------------------------          |   + removeRpcRequest                          |
+      |                   |               |   + addStreamCallback                         |
+      |                   |               |   + deactivateStream                          |
+      |                   |               -------------------------------------------------
+      |                   |                                                            |
+     \|/                  -----------|/                                               \|/
+ ------------------------     ------------------------   -------------------------------------
+ | RpcHandler           |     | StreamManager        |   | ChunkReceivedCallback             |
+ | +receive             |     | +getChunk            |   | +onSuccess(chunkIdx,ManagedBuffer)|
+ | +getStreamManager    |     | +openStream          |   | +onFailure(chunkIdx,Throwable)    |
+ | +exceptionCaught     |     | +registerChannel     |   -------------------------------------
+ | +connectionTerminated|     | +connectionTerminated|                                 |
+ |                      |     | +checkAuthorization  |                                \|/
+ ------------------------     ------------------------   -------------------------------------
+                                                         | RpcResponseCallback               |
+                                                         | +onSuccess(ByteBuffer)            |
+                                                         | +onFailure(Throwable)             |
+                                                         -------------------------------------
+                                                                                       |
+                                                                                      \|/
+                                                         -------------------------------------
+                                                         | StreamCallback                    |
+                                                         | +onData(streamId,ByteBuffer)      |
+                                                         | +onComplete(streamId)             |
+                                                         | +onFailure(streamId,Throwable)    |
+                                                         -------------------------------------
+
+
+
+TransportContext
+    -> TransportClientFactory(TransportClient)
+    -> TransprotServer
+
+
+
+TransportChannelHandler
+    TransporotRequestHander
+    TransportResponseHandler
+
+
+
+
+
+
