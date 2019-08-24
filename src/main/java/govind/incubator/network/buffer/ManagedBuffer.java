@@ -30,7 +30,7 @@ abstract public class ManagedBuffer {
 	 * 若该缓冲区支持引用计数，则引用计数加1
 	 * @return
 	 */
-	abstract public  ManagedBuffer retail();
+	abstract public  ManagedBuffer retain();
 
 	/**
 	 * 若该缓冲区支持引用计数，则引用计数减1
