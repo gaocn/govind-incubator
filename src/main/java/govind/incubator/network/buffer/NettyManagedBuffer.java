@@ -67,4 +67,10 @@ public class NettyManagedBuffer extends ManagedBuffer{
 				"buf=" + buf +
 				'}';
 	}
+
+	//TODO 验证正确性
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj);
+	}
 }
