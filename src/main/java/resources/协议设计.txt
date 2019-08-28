@@ -1,3 +1,27 @@
+                               ---------------------------------------
+                               | ManagedBuffer                       |           ------------------------------
+                               |  + long size()                      |           | LimitInputStream           |
+                               |  + ManagedBuffer retain()           |           |  + long left               |
+                               |  + ManagedBuffer release()          |           ----------------------------*-
+                               |  + Object convertToNetty()          |   ------------------------------     /|\
+                               |  + ByteBuffer nioByteBuffer()       |   | LazyFileRegion             |      |
+                               |  + InputStream createInputStream()  |   |  + transferTo(channel, pos)|      |
+                               ---+---------------+------------+------   ----------------------------*-      |
+                                  |               |            |                                    /|\      |
+                                  |               |            |                                     |       |
+                                  |               |            |                                     |       |
+                                  |               |            |                                     |       |
+                                  |               |            |                                     |       |
+                                  |               |            |                                     |       |
+                  -----------------               |            ------------------------------        |       |
+                  |                               |                                         |        |       |
+   --------------------------------       -----------------------------     ----------------------------------
+   | NioManagedBuffer             |       | NettyManagedBuffer        |     | FileSegmentManagedBuffer       |
+   |  + final ByteBuffer buffer   |       |  + final ByteBuf buffer   |     |  + final TransportConf conf    |
+   --------------------------------       -----------------------------     |  + final File file             |
+                                                                            |  + final long offset           |
+                                                                            |  + final long length           |
+                                                                            |---------------------------------
 
                 --------------------------
                 | Encodable              |
