@@ -4,7 +4,7 @@ package govind.incubator.network.protocol;
 import govind.incubator.network.buffer.ManagedBuffer;
 import io.netty.buffer.ByteBuf;
 
-public interface Message {
+public interface Message extends Encodable{
 
 	/**
 	 * 消息类型
