@@ -76,10 +76,86 @@
 
 -------------------------------------      --------------------------------------   ---------------------------
 | ChunkFetchRequest                 |      | ChunkFetchSuccess                  |-->| ChunkFetchFailure       |
-| + streamChunkId                   |      | + streamChunkId                    |   |                         |
+| + StreamChunkId                   |      | + StreamChunkId                    |   |                         |
 | +type:Type.ChunkFetchRequest      |      | +type:Type.ChunkFetchSuccess       |   |  + long streamChunkId   |
 | +static ChunkFetchRequest decode()|      | +static ChunkFetchSuccess decode() |   |  + String error         |
 -------------------------------------      --------------------------------------   ---------------------------
+                                |                |                                                          |
+                               \|/              \|/                                                         |
+                           ---------------------------   ------------                                       |
+                           | ChunkFetchFailure       |---* Encodable|                                       |
+                           |  + long streamChunkId   |   ------------                                      \|/
+                           |  + String error         |                               ---------------------------
+                           ---------------------------                               | CodecUtil               |
+                                                                                     |  + Strings              |
+                                        ---------------------------                  |  + ByteArray            |
+                                        | FileRegion              |                  |  + StringArray          |
+                                        |  + long position()      |                  |-------------------------|
+    ----------------------------        |  + long count()         |                  |   + encodedLength       |
+    | AbstractReferenceCounted |        |  + long transfered()    |                  |   + encode(Bytebuf)     |
+    |  +void deallocate()      |        |  + long transferTo      |                  |   + decode(Bytebuf)     |
+    ------------*---------------        --------------*------------                   ---------------------------
+               /|\                                   /|\
+                |                                     |
+                |-----------------       -------------|
+                                 |       |
+                      ---------------------------------
+                      | MessageWithHeader             |
+                      |  - ByteBuf header             |
+                      |  - Object body                |
+                      |  - int headerLength           |
+                      |  - int bodyLength             |
+                      |  - long totalBytesTransferred |
+                      |  - NIO_BUFFER_LIMIT= 256*1024 |
+                      |-------------------------------|
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 //消息类型定义
