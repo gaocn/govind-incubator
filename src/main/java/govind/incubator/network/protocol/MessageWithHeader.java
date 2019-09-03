@@ -6,6 +6,7 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
@@ -49,7 +50,6 @@ import java.nio.channels.WritableByteChannel;
  * 使用nmap可以减少用户态到内核态的内存拷贝，但是采用nmap+write的问题是：当向nmap文
  * 件写入数据的同时另一个进程对文件执行了truncate操作，会导致memory access错误，会
  * 导致写入数据进程被kill掉。
- *
  *
  * 2、sendfile(socket, file, len) or transferTo(position, count, writableChannel);
  * sendfile不仅能够减少拷贝次数同时也减少用户态/内核态切换次数，只需要一次系统调用。
@@ -131,7 +131,7 @@ public class MessageWithHeader extends AbstractReferenceCounted implements FileR
 	 * 1、若是ByteBuf则采用拷贝方式发送到缓存区，拷贝直接数组时有两种情况:
 	 * 	(1)、若字节数组长度小于NIO_BUFFER_LIMIT，则只需要一次发送；
 	 * 	(2)、若字节数组长度大于NIO_BUFFER_LIMIT，则按照NIO_BUFFER_LIMIT拆分，分批发送。
-	 * 2、若为FileRegion对象，则采用 Zero-Copy方式传输；
+	 * 2、若为FileRegion对象，则采用Zero-Copy方式传输；
 	 * @param target
 	 * @param position
 	 * @return
@@ -140,17 +140,66 @@ public class MessageWithHeader extends AbstractReferenceCounted implements FileR
 	@Override
 	public long transferTo(WritableByteChannel target, long position) throws IOException {
 
+		assert position == totalBytesTransferred : "非法传输位置！";
+
 		//1. 发送header
-
-
+		long writtenBytesOfHeader = 0L;
+		if (header.readableBytes() > 0) {
+			writtenBytesOfHeader = copyByteBuf(header, target);
+			totalBytesTransferred += writtenBytesOfHeader;
+			if (header.readableBytes() > 0) {
+				return writtenBytesOfHeader;
+			}
+		}
 
 		//2. 发送body，若body为ByteBuf对象则采用拷贝方式，若body为FileRegion对象则采用Zero-Copy发送
+		long writtenBytesOfBody = 0L;
+		if (body instanceof FileRegion) {
+			writtenBytesOfBody = ((FileRegion)body).transferTo(target,totalBytesTransferred - headerLength);
+		} else if(body instanceof ByteBuf) {
+			writtenBytesOfBody = copyByteBuf((ByteBuf)body, target);
+		}
+		totalBytesTransferred += writtenBytesOfBody;
 
+		return writtenBytesOfHeader + writtenBytesOfBody;
+	}
 
+	/**
+	 * 将ByteBuf中的数据拷贝到指定channel中，底层基于ByteBuffer实现
+	 * @param buf
+	 * @param target
+	 * @return 写入channel中的字节数
+	 */
+	private long copyByteBuf(ByteBuf buf, WritableByteChannel target) throws IOException {
+		ByteBuffer nioBuffer = buf.nioBuffer();
+		int writtenBytes =
+				nioBuffer.remaining() < NIO_BUFFER_LIMIT ?
+				target.write(nioBuffer) :
+				writeNioBuffer(target, nioBuffer);
+		buf.skipBytes(writtenBytes);
 		return 0;
 	}
 
+	/**
+	 * ByteBuffer中的数据超过{@link #NIO_BUFFER_LIMIT}分批将ByteBuffer中
+	 * 的字节写到指定channel中
+	 * @param target
+	 * @param buffer
+	 * @return 写入到channel的直接数
+	 */
+	private int writeNioBuffer(WritableByteChannel target, ByteBuffer buffer) throws IOException {
+		int originalLimit = buffer.limit();
+		int writtenBytes = 0;
 
+		try {
+			int bytesToWrite = Math.min(NIO_BUFFER_LIMIT, buffer.remaining());
+			buffer.limit(buffer.position() + bytesToWrite);
+			writtenBytes = target.write(buffer);
+		} finally {
+			buffer.limit(originalLimit);
+		}
+		return writtenBytes;
+	}
 
 
 	@Override
