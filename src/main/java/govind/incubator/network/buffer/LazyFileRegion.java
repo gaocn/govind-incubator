@@ -3,7 +3,6 @@ package govind.incubator.network.buffer;
 import com.google.common.io.Closeables;
 import io.netty.channel.FileRegion;
 import io.netty.util.AbstractReferenceCounted;
-import jersey.repackaged.com.google.common.base.MoreObjects;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -19,7 +18,7 @@ import java.nio.channels.WritableByteChannel;
  * 默认的{@link io.netty.channel.DefaultFileRegion}需要显示创建。
  * 默认Netty不支持lazy级别的创建方式！
  */
-public class LazyFileRegion /*extends AbstractReferenceCounted implements FileRegion*/{
+public class LazyFileRegion extends AbstractReferenceCounted implements FileRegion{
 	private final File file;
 	private final long offset;
 	private final long length;
@@ -36,6 +35,48 @@ public class LazyFileRegion /*extends AbstractReferenceCounted implements FileRe
 		this.file = file;
 		this.offset = offset;
 		this.length = length;
+	}
+
+	@Override
+	public long position() {
+		return offset;
+	}
+
+	@Override
+	public long transfered() {
+		return numBytesTransferred;
+	}
+
+	@Override
+	public long count() {
+		return length;
+	}
+
+	@Override
+	public long transferTo(WritableByteChannel target, long position) throws IOException {
+		if (fileChannel == null) {
+			fileChannel = new FileInputStream(file).getChannel();
+		}
+
+		long count = this.length - position;
+		if (count < 0 || position < 0) {
+			throw new IllegalArgumentException("position out of range: " + position + "(expected: 0-" + (length - 1) + ")");
+		}
+
+		if (count == 0) {
+			return 0L;
+		}
+
+		long written = fileChannel.transferTo(this.offset + position,  count, target);
+		if (written > 0) {
+			numBytesTransferred += written;
+		}
+		return written;
+	}
+
+	@Override
+	protected void deallocate() {
+		Closeables.closeQuietly(fileChannel);
 	}
 }
 

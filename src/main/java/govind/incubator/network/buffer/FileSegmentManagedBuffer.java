@@ -88,8 +88,7 @@ public class FileSegmentManagedBuffer extends ManagedBuffer{
 	@Override
 	public Object nettyByteBuf() throws IOException {
 		if (lazyFileDescription) {
-			//return new LazyFileRegion(file, offset, length);
-			return new DefaultFileRegion(file, offset, length);
+			return new LazyFileRegion(file, offset, length);
 		} else {
 			return new DefaultFileRegion(file, offset, length);
 		}
