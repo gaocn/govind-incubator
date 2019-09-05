@@ -94,14 +94,14 @@ public class MessageWithHeader extends AbstractReferenceCounted implements FileR
 	private final ByteBuf header;
 	private final Object body;
 	private final int headerLength;
-	private final int bodyLength;
+	private final long bodyLength;
 
 	/**
 	 * 记录每次已传输的字节数
 	 */
 	private long totalBytesTransferred;
 
-	public MessageWithHeader(ByteBuf header, Object body, int headerLength, int bodyLength) {
+	public MessageWithHeader(ByteBuf header, Object body, int headerLength, long bodyLength) {
 
 		assert body instanceof ByteBuf || body instanceof FileRegion: "body类型只能为ByteBuf或FileRegion之一！";
 
