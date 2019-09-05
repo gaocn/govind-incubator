@@ -70,7 +70,7 @@
 -------------------------------------      --------------------------------------   ---------------------------
 | StreamRequest                     |      | StreamResponse                     |-->| StreamFailure           |
 | + streamId                        |      | +streamId                          |   |                         |
-| +type:Type.StreamRequest          |      | +type:Type.StreamResponse          |   |  + long streamId        |
+| +type:Type.StreamRequest          |      | +type:Type.StreamResponse          |   |  + String streamId      |
 | +static StreamRequest decode()    |      | +static StreamResponse decode()    |   |  + String error         |
 -------------------------------------      --------------------------------------   ---------------------------
 
@@ -87,7 +87,7 @@
                            |  + long streamChunkId   |   ------------                                      \|/
                            |  + String error         |                               ---------------------------
                            ---------------------------                               | CodecUtil               |
-                                                                                     |  + Strings              |
+编码器                                                                                |  + Strings              |
                                         ---------------------------                  |  + ByteArray            |
                                         | FileRegion              |                  |  + StringArray          |
                                         |  + long position()      |                  |-------------------------|
@@ -100,14 +100,67 @@
                 |-----------------       -------------|
                                  |       |
                       ---------------------------------
-                      | MessageWithHeader             |
-                      |  - ByteBuf header             |
-                      |  - Object body                |
-                      |  - int headerLength           |
-                      |  - int bodyLength             |
-                      |  - long totalBytesTransferred |
-                      |  - NIO_BUFFER_LIMIT= 256*1024 |
-                      |-------------------------------|
+                      | MessageWithHeader             |             **********************************************
+                      |  - ByteBuf header             |             * 帧格式：                                    *
+                      |  - Object body                |             *  ---------------------------------         *
+                      |  - int headerLength           |<------      *  | Frame Len(8 bytes) | ByteBuf  |         *
+                      |  - int bodyLength             |      |      *  ---------------------------------         *
+                      |  - long totalBytesTransferred |      |      *  					   /            |        *
+                      |  - NIO_BUFFER_LIMIT= 256*1024 |      |      *  			        /	            |        *
+                      |-------------------------------|      |      *  			     /	                |        *
+                                                             |      *  		      /                     |        *
+                    ----------------------------------       |      *  		    /                       |        *
+                    |MessageToMessageEncoder<Message>|       |      * 	        -------------------------        *
+                    ----------------*-----------------       |      * 	        | Header  | BodyInFrame |        *
+                                   /|\                       |      * 	        -------------------------        *
+                                    |                        |      * 	        \          \                     *
+               --------------------------------------------- |      * 			 ------------------------------- *
+               | MessageEncoder                            |--      * 			 | Type(1 byte) | MsgInHeader  | *
+               |  - encode(ctx, Message, List<Object> out) |------->* 			 ------------------------------- *
+               ---------------------------------------------        **********************************************
+解码器
+              =========================================================================================================
+                   ----------------------------------               --------------------------------
+                   |  ChannelInboundHandlerAdapter  |               | Interceptor                  |
+                   ----------------*-----------------               |  + handle(ByteBuf)           |
+                                  /|\                               |  + exceptionCaught(Throwable)|
+                                   |                                |  + channelInactive()         |
+                                   |                                --------------------------------
+               ---------------------------------------------                       /|\
+               | TransportFrameDecoder                     |                        |
+               |  - int MAX_FRAME_SIZE = Integer.MAX_VALUE |                        |
+               |  - int UNKNOWN_FRAME_SIZE = -1            |                        |
+               |  - int FRAME_LENGTH_SIZE = 8              |                        |
+               |  - LinkedList<ByteBuf> buffers            |                        |
+               |  - ByteBuf frameLengthBuffer              |                        |
+               |  - long totalSize = 0                     |                        |
+               |  - long nextFrameSize = UNKNOWN_FRAME_SIZE|                        |
+               |  - volatile Interceptor interceptor       |-------------------------
+               ---------------------------------------------
+               |  + void channelRead(ctx, msg)             |
+               |  + void channelInactive(ctx)              | 1、当缓存的数据不为空且存在拦截器时，则不停的将数据喂给拦截器直到拦截器停止消费或缓存数据为空。
+               |  + void exceptionCaught(ctx, cause)       | 2、当缓存数据不为空且不存在拦截器时，则从缓存区中取出一个frame将其交给下一个handler处理。
+               |  - ByteBuf decodeNext()                   |
+               |  - ByteBuf decodeNext()                   |
+               |  - long decodeFrameSize()                 |
+               |  - ByteBuf nextBufferForFrame(bytesToRead)|
+               |  - void setInterceptor(interceptor)       |
+               ---------------------------------------------
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+                    ----------------------------------
+                    |MessageToMessageDecoder<ByteBuf>|
+                    ----------------*-----------------
+                                   /|\
+                                    |
+               ---------------------------------------------         ***********************************************
+               | MessageEncoder                            |         *  Type type = Message.Type.decode(buf);      *
+               |  - encode(ctx, ByteBuf, List<Object> out) |-------->*  Message msg = decode(buf, type);           *
+               ---------------------------------------------         ***********************************************
+              =========================================================================================================
+
+
+
 
 
 
