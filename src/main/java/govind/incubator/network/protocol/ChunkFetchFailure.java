@@ -7,8 +7,8 @@ import io.netty.buffer.ByteBuf;
 
 public class ChunkFetchFailure extends AbstractMessage implements ResponseMessage {
 
-	public final StreamChunkId streamChunkId;
-	public final String error;
+	final StreamChunkId streamChunkId;
+	final String error;
 
 	public ChunkFetchFailure(StreamChunkId streamChunkId, String error) {
 		this.streamChunkId = streamChunkId;

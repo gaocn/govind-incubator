@@ -10,7 +10,7 @@ import io.netty.buffer.ByteBuf;
  * 进行更加高效的数据传输！
  */
 public class ChunkFetchSuccess extends AbstractResponseMessage {
-	public final StreamChunkId streamChunkId;
+	final StreamChunkId streamChunkId;
 
 	public ChunkFetchSuccess(ManagedBuffer body, StreamChunkId streamChunkId) {
 		super(body, true);
