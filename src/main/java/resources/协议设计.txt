@@ -1,3 +1,4 @@
+ 缓存数据设计
                                ---------------------------------------
                                | ManagedBuffer                       |           ------------------------------
                                |  + long size()                      |           | LimitInputStream           |
@@ -22,7 +23,7 @@
                                                                             |  + final long offset           |
                                                                             |  + final long length           |
                                                                             |---------------------------------
-
+消息协议设计
                 --------------------------
                 | Encodable              |
                 |  +int encodedLength()  |
@@ -135,7 +136,7 @@
                |  - ByteBuf frameLengthBuffer              |                        |
                |  - long totalSize = 0                     |                        |
                |  - long nextFrameSize = UNKNOWN_FRAME_SIZE|                        |
-               |  - volatile Interceptor interceptor       |-------------------------
+               |  - volatile Interceptor inteceptor        |-------------------------
                ---------------------------------------------
                |  + void channelRead(ctx, msg)             |
                |  + void channelInactive(ctx)              | 1、当缓存的数据不为空且存在拦截器时，则不停的将数据喂给拦截器直到拦截器停止消费或缓存数据为空。
@@ -144,7 +145,7 @@
                |  - ByteBuf decodeNext()                   |
                |  - long decodeFrameSize()                 |
                |  - ByteBuf nextBufferForFrame(bytesToRead)|
-               |  - void setInterceptor(interceptor)       |
+               |  - void setInterceptor(inteceptor)        |
                ---------------------------------------------
               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
               |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
