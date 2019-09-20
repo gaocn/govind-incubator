@@ -5,7 +5,7 @@ import io.netty.buffer.ByteBuf;
 /**
  *
  */
-public interface Interceptor {
+public interface Inteceptor {
 	/**
 	 * 处理接收到的数据
 	 * @param buf 包含数据的缓冲区
@@ -13,18 +13,18 @@ public interface Interceptor {
 	 * 载handler上的拦截器
 	 * @throws Exception
 	 */
-	boolean handle(ByteBuf buf);
+	boolean handle(ByteBuf buf) throws Exception;
 
 	/**
 	 * 当channel关闭但拦截器仍然没有卸载时调用
 	 * @throws Exception
 	 */
-	void channelInactive();
+	void channelInactive() throws Exception;
 
 	/**
 	 * 当channel pipeline中发生异常时调用
 	 * @param cause
 	 * @throws Exception
 	 */
-	void exceptionCaught(Throwable cause);
+	void exceptionCaught(Throwable cause) throws Exception;
 }
