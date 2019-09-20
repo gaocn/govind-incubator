@@ -6,7 +6,7 @@ import io.netty.buffer.ByteBuf;
 import jersey.repackaged.com.google.common.base.MoreObjects;
 
 public class RpcResponse extends AbstractResponseMessage{
-	private final long requestId;
+	public final long requestId;
 
 	public RpcResponse(ManagedBuffer body, long requestId) {
 		super(body, true);

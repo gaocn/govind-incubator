@@ -7,8 +7,8 @@ import java.util.Objects;
 
 public class RpcFailure extends AbstractMessage implements ResponseMessage {
 
-	private final long requestId;
-	private final String error;
+	public final long requestId;
+	public final String error;
 
 	public RpcFailure(long requestId, String errorMsg) {
 		this.requestId = requestId;

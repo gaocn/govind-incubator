@@ -45,8 +45,8 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 	/** when decoder from {@link #buffers}, nextFrameSize indicate current frame size(not include frame length) to decode */
 	private long nextFrameSize = UNKNOWN_FRAME_SIZE;
 
-	/** if set, then every time {@link #channelRead(ChannelHandlerContext, Object)} is called, feed each decoded frame to Interceptor. */
-	private volatile Interceptor interceptor;
+	/** if set, then every time {@link #channelRead(ChannelHandlerContext, Object)} is called, feed each decoded frame to Inteceptor. */
+	private volatile Inteceptor inteceptor;
 
 
 	/**
@@ -66,7 +66,7 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 			totalSize += buf.readableBytes();
 
 			while (!buffers.isEmpty()) {
-				if (interceptor == null) {
+				if (inteceptor == null) {
 					ByteBuf frame = decodeNext();
 					if (frame == null) {
 						break;
@@ -79,12 +79,12 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 					int available = first.readableBytes();
 
 					if (feedInterceptor(first)) {
-						assert !first.isReadable() : "interceptor is alive, but buffer has uncomsumed data!";
+						assert !first.isReadable() : "inteceptor is alive, but buffer has uncomsumed data!";
 					}
 
 					/**
 					 * 采用如下方式释放已读取数据的内容的问题：
-					 * 当{@link Interceptor}实例采用读取ByteBuf的方法无法修改{@link ByteBuf}的readIndex时
+					 * 当{@link Inteceptor}实例采用读取ByteBuf的方法无法修改{@link ByteBuf}的readIndex时
 					 * 会导致ByteBuf对象一直被消费，不会被释放掉！
 					 *
 					 * 建议使用{@link ByteBuf.readSlice(int length)}方法进行消费
@@ -104,8 +104,8 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 	@Override
 	public void channelInactive(ChannelHandlerContext ctx) throws Exception {
 		buffers.forEach(buf -> buf.release());
-		if (interceptor != null) {
-			interceptor.channelInactive();
+		if (inteceptor != null) {
+			inteceptor.channelInactive();
 		}
 		frameLengthBuffer.release();
 		super.channelInactive(ctx);
@@ -113,8 +113,8 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-		if (interceptor != null) {
-			interceptor.exceptionCaught(cause);
+		if (inteceptor != null) {
+			inteceptor.exceptionCaught(cause);
 		}
 		super.exceptionCaught(ctx, cause);
 	}
@@ -212,9 +212,9 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 		return frameBuf;
 	}
 
-	public void setInterceptor(Interceptor interceptor) {
-		assert this.interceptor == null : "不能重设拦截器";
-		this.interceptor = interceptor;
+	public void setInteceptor(Inteceptor inteceptor) {
+		assert this.inteceptor == null : "不能重设拦截器";
+		this.inteceptor = inteceptor;
 	}
 
 	/**
@@ -223,9 +223,9 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 	 * @return
 	 */
 	private boolean feedInterceptor(ByteBuf buf) {
-		if (interceptor != null && !interceptor.handle(buf)) {
+		if (inteceptor != null && !inteceptor.handle(buf)) {
 			return true;
 		}
-		return interceptor != null;
+		return inteceptor != null;
 	}
 }

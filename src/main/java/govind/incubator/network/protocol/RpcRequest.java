@@ -12,7 +12,7 @@ public class RpcRequest extends AbstractMessage implements RequestMessage {
 	/**
 	 * 请求标识，RpcRequest和RpcResponse响应报文的标识相同！
 	 */
-	private final long requestId;
+	public final long requestId;
 
 	public RpcRequest(long requestId,  ManagedBuffer body) {
 		super(body, true);

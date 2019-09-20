@@ -1,50 +1,99 @@
-                 --------------------------------------
-                 | Messagehandler<T extends Message>  |
-                 |  + void handle(T message)          |
-                 |  + void exceptionCaught(Throwable) |
-                 |  + void channelUnregistered()      |
-                 ---------+------------------+---------
-                         /|\                /|\
-                          |                  |
-                          |                  |
-                ----------|                  |---------------------
-   -------------|---------------          -------------------------|-----------------------
-   | TransporotRequestHander   |          |  TransportResponseHandler                     |
-   |  + Channel                |          |   + Channel                                   |
-   |  + TransportClient        |          |   + Map<StreamChunkId, ChunkReceivedCallback> |
-   |  + RpcHandler             |          |   + Map<Long, RpcResponseCallback>            |
-   |  + StreamManager          |          |   + Queue<StreamCallback>                     |
-   |  + processFetchRequest    |          |   + volatile boolean streamActive             |
-   |  + processStreamRequest   |          |   + AtomicLong timeOfLastRequestNs            |
-   |  + processRpcRequest      |          |   + addFetchRequest                           |
-   |  + processOneWayMessage   |          |   + removeFetchRequest                        |
-   |  + respond(Encodable res) |          |   + addRpcRequest                             |
-   -----------------------------          |   + removeRpcRequest                          |
-      |                   |               |   + addStreamCallback                         |
-      |                   |               |   + deactivateStream                          |
-      |                   |               -------------------------------------------------
-      |                   |                                                            |
-     \|/                  -----------|/                                               \|/
- ------------------------     ------------------------   -------------------------------------
- | RpcHandler           |     | StreamManager        |   | ChunkReceivedCallback             |
- | +receive             |     | +getChunk            |   | +onSuccess(chunkIdx,ManagedBuffer)|
- | +getStreamManager    |     | +openStream          |   | +onFailure(chunkIdx,Throwable)    |
- | +exceptionCaught     |     | +registerChannel     |   -------------------------------------
- | +connectionTerminated|     | +connectionTerminated|                                 |
- |                      |     | +checkAuthorization  |                                \|/
- ------------------------     ------------------------   -------------------------------------
-                                                         | RpcResponseCallback               |
-                                                         | +onSuccess(ByteBuffer)            |
-                                                         | +onFailure(Throwable)             |
-                                                         -------------------------------------
-                                                                                       |
-                                                                                      \|/
-                                                         -------------------------------------
-                                                         | StreamCallback                    |
-                                                         | +onData(streamId,ByteBuffer)      |
-                                                         | +onComplete(streamId)             |
-                                                         | +onFailure(streamId,Throwable)    |
-                                                         -------------------------------------
+
+                                                                                +       *
+                                                                               /|\     /|\     /|\
+                                                                                |继承    |实现    |关联
+                             --------------------------------------
+                             | Messagehandler<T extends Message>  |
+                             |  + void handle(T message)          |
+                             |  + void exceptionCaught(Throwable) |
+                             |  + void channelUnregistered()      |
+                             ---------+------------------+---------
+                                     /|\                /|\
+                                      |                  |
+                     <RequestMessage> |                  |  <ResponseMessage>
+                      ----------------|                  |----------------------------
+ ---------------------|---------------------------          -------------------------|-----------------------
+ | TransporotRequestHandler                      |          |  TransportResponseHandler                     |
+ |  - Channel channel                            |          |   - Channel channel                           |
+ |  - TransportClient requestClient                     |          |   - Map<StreamChunkId, ChunkReceivedCallback> |---
+ |  - RpcHandler rpcHandler                      |----      |   - Map<Long, RpcResponseCallback> rpcs       |--|---|
+ |  - StreamManager streamManager                |   |      |   - Queue<StreamCallback>  streamCallbacks    |--|---|-|
+ -------------------------------------------------   |      |   - volatile boolean streamActive             |  |   | |
+ |  + void handle(RequestMessage request)        |   |      |   - AtomicLong timeOfLastRequestNs            |  |   | |
+ |  - void processRpcRequest(RpcRequest)         |   |      -------------------------------------------------  |   | |
+ |  - void processOneWayMessage(OneWayMessage)   |   |      |   + void handle(RequestMessage request)       |  |   | |
+ |  - void processStreamRequest(StreamRequest)   |   |      |   - void failOutstandingRequests(Throwable )  |  |   | |
+ |  - void processChunkRequest(ChunkFetchRequest)|   |      |   + void channelUnregistered()                |  |   | |
+ |  - void respond(Encodable resp)               |   |      |   + void exceptionCaught(Throwable cause)     |  |   | |
+ |  + void channelUnregistered()                 |   |      |   + int numOutstandingRequests()              |  |   | |
+ |  + void exceptionCaught(Throwable cause)      |   |      |   + long getTimeOfLastRequestNs               |  |   | |
+ -------------------------------------------------   |      |   + void updateTimeOfLastRequest()            |  |   | |
+                                                     |      |   + void addRpcRequest(requestId, RpcCallback)|  |   | |
+                                                     |      |   + void addStreamCallBack(StreamCallback )   |  |   | |
+                                                     |      |   + void addFetchRequest(StreamChunkId, ChunkCallback) |
+                                                     |      |   + void deactivateStream()                   |  |   | |
+                                                     |      |   + void removeRpcRequest(long requestId)     |  |   | |
+                                                     |      |   + void removeFetchRequest(StreamChunkId)    |  |   | |
+                                                     |      -------------------------------------------------  |   | |
+                                                     |                                                        \|/  | |
+                                                    \|/                     -------------------------------------- | |
+   ------------------------------------------------------                   | ChunkReceivedCallback              | | |
+   | RpcHandler                                         |                   | + onSuccess(chunkIdx,ManagedBuffer)| | |
+   | + RpcCallback ONE_WAY_CALLBACK                     |------             | + onFailure(chunkIdx,Throwable)    | | |
+   |-----------------------------------------------------     |             -------------------------------------- | |
+   | + StreamManager getStreamManager()                 |     |                                               |----- |
+   | + connectionTerminated(TransportClient)            |     |                                              \|/     |
+   | + exceptionCaught(Throwable, TransportClient)      |     |             --------------------------------------   |
+   | + receive(TransportClient, ByteBuffer)             |     |             | RpcCallback                        |   |
+   | + receive(TransportClient, ByteBuffer, RpcCallback)|     |             | + onSuccess(ByteBuffer)            |   |
+   --------------*---------------------------------------     |             | + onFailure(Throwable)             |   |
+                /|\                   |                       |             ------------*-------------------------   |
+                 |                    |                       |                        /|\                   |--------
+                 |                    |                      \|/     |------------------|                   \|/
+   ----------------------------       |           -----------------------   -------------------------------------
+   | NoOpRpcHandler           |       |           | OneWayRpcCallback   |   | StreamCallback                    |
+   | + StreamManager manager  |       |           -----------------------   | + onData(streamId,ByteBuffer)     |
+   ----------------------------       |                                     | + onComplete(streamId)            |
+               |                      |                                     | + onFailure(streamId,Throwable)   |
+               |                      |                                     -------------------------------------
+               |                     \|/
+               |            -------------------------------------------------------------------
+               |            | StreamManager                                                   |
+               |            | + ManagedBuffer openStream(long streamId)                       |
+               |            | + void connectionTerminated(Channel channel)                    |
+               |            | + void registerChannel(Channel channel, long streamId)          |
+               |            | + ManagedBuffer getChunk(long streamId, int chunkIndex)         |
+               |            | + void checkAuthorization(TransportClient requestClient, long streamId)|
+               |            -------------------------------*-----------------------------------
+               |                                          /|\
+              \|/                   |----------------------|
+           ----------------------------------------------------                  --------------------------------------
+           | OneForOneStreamManager                           |                  | StreamState                        |
+           | + AtomicLong nextStreamId                        |                  | + String appId                     |
+           | + ConcurrentHashMap<Long, StreamState> streams   |----------------->| + Iterator<ManagedBuffer> buffers  |
+           |--------------------------------------------------|                  | + Channel associatedChannel        |
+           | + long registerStream(appId, buffers)            |                  | + int curChunkIdx                  |
+           ----------------------------------------------------                  --------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
