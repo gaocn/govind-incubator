@@ -7,8 +7,8 @@ import io.netty.buffer.ByteBuf;
  * 对某个Stream中某个Chunk数据块标识的封装
  */
 public class StreamChunkId implements Encodable {
-	final long  streamId;
-	final int  chunkIdx;
+	public final long  streamId;
+	public final int  chunkIdx;
 
 	public StreamChunkId(long streamId, int chunkIdx) {
 		this.streamId = streamId;

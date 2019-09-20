@@ -11,7 +11,7 @@ import io.netty.buffer.ByteBuf;
  * 在数据流动前，streamId为任意字符串并且需要端与端进行协商后确定!
  */
 public class StreamRequest extends AbstractMessage implements RequestMessage{
-	final String  streamId;
+	public final String  streamId;
 
 	public StreamRequest(String streamId) {
 		this.streamId = streamId;

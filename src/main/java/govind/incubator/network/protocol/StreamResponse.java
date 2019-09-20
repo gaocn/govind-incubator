@@ -7,8 +7,8 @@ import govind.incubator.network.util.CodecUtil.Strings;
 import io.netty.buffer.ByteBuf;
 
 public class StreamResponse extends AbstractResponseMessage {
-	final String streamId;
-	final long byteCount;
+	public final String streamId;
+	public final long byteCount;
 
 	public StreamResponse(ManagedBuffer body, String streamId, long byteCount) {
 		super(body, true);

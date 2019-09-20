@@ -5,8 +5,8 @@ import govind.incubator.network.util.CodecUtil;
 import io.netty.buffer.ByteBuf;
 
 public class StreamFailure extends AbstractMessage implements ResponseMessage {
-	final String streamId;
-	final String error;
+	public final String streamId;
+	public final String error;
 
 	public StreamFailure(String streamId, String error) {
 		this.streamId = streamId;

@@ -5,7 +5,7 @@ import io.netty.buffer.ByteBuf;
 import java.util.Objects;
 
 public class ChunkFetchRequest extends AbstractMessage implements RequestMessage{
-	final StreamChunkId streamChunkId;
+	public final StreamChunkId streamChunkId;
 
 	public ChunkFetchRequest(StreamChunkId streamChunkId) {
 		this.streamChunkId = streamChunkId;
