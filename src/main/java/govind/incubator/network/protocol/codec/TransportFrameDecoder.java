@@ -222,7 +222,7 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 	 * @param buf
 	 * @return
 	 */
-	private boolean feedInterceptor(ByteBuf buf) {
+	private boolean feedInterceptor(ByteBuf buf) throws Exception {
 		if (inteceptor != null && !inteceptor.handle(buf)) {
 			return true;
 		}

@@ -1,6 +1,6 @@
 package govind.incubator.network.handler;
 
-import govind.incubator.network.TransportClient;
+import govind.incubator.network.client.TransportClient;
 import govind.incubator.network.protocol.Message;
 import govind.incubator.network.protocol.RequestMessage;
 import govind.incubator.network.protocol.ResponseMessage;

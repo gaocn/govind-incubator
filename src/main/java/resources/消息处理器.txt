@@ -1,7 +1,7 @@
-
-                                                                                +       *
-                                                                               /|\     /|\     /|\
-                                                                                |继承    |实现    |关联
+继承     实现     关联
+ +       *
+/|\     /|\      /|\
+ |       |        |
                           ----------------------------------------
                           | SimpleChannelInboundHandler<Message> |
                           | + void exceptionCaught(ctx, cause)   |
@@ -97,41 +97,3 @@
            |--------------------------------------------------|                  | + Channel associatedChannel        |
            | + long registerStream(appId, buffers)            |                  | + int curChunkIdx                  |
            ----------------------------------------------------                  --------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-TransportContext
-    -> TransportClientFactory(TransportClient)
-    -> TransprotServer
-
-
-
-TransportChannelHandler
-    TransporotRequestHander
-    TransportResponseHandler
-
-
-
-
-
-

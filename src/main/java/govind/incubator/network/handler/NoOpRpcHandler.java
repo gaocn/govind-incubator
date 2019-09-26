@@ -1,6 +1,6 @@
 package govind.incubator.network.handler;
 
-import govind.incubator.network.TransportClient;
+import govind.incubator.network.client.TransportClient;
 
 import java.nio.ByteBuffer;
 
@@ -28,6 +28,4 @@ public class NoOpRpcHandler extends RpcHandler {
 	public void receive(TransportClient client, ByteBuffer msg, RpcCallback callback) {
 		throw new UnsupportedOperationException("无法处理消息");
 	}
-
-
 }
