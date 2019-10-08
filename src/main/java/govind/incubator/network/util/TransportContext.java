@@ -49,7 +49,17 @@ public class TransportContext {
 
 	private final MessageEncoder encoder;
 	private final MessageDecoder decoder;
-	private final TransportFrameDecoder frameDecoder;
+
+	/**
+	 * 2019-10-08 16:47:33 [govind-server-1hread] [ERROR] TransportContext:
+	 * 初始化channel pipeline时出错：govind.incubator.network.protocol.codec
+	 * .TransportFrameDecoder is not a @Sharable handler, so can't be added
+	 * or removed multiple times.
+	 * io.netty.channel.ChannelPipelineException: govind.incubator.network.
+	 * protocol.codec.TransportFrameDecoder is not a @Sharable handler, so
+	 * can't be added or removed multiple times.
+	 */
+	//private final TransportFrameDecoder frameDecoder;
 
 	public TransportContext(TransportConf conf, RpcHandler rpcHandler) {
 		this(conf, rpcHandler, false);
@@ -61,7 +71,7 @@ public class TransportContext {
 		this.closeIdleConnections = closeIdleConnections;
 		this.encoder = new MessageEncoder();
 		this.decoder = new MessageDecoder();
-		frameDecoder = NettyUtil.createFrameDecoder();
+		//frameDecoder = NettyUtil.createFrameDecoder();
 	}
 
 	public TransportConf getConf() {
@@ -85,7 +95,7 @@ public class TransportContext {
 			TransportChannelHandler channelHandler = createChannelHandler(ch, rpcHandler);
 			ch.pipeline()
 					.addLast("encoder", encoder)
-					.addLast(TransportFrameDecoder.HANDLER_NAME, frameDecoder)
+					.addLast(TransportFrameDecoder.HANDLER_NAME, NettyUtil.createFrameDecoder())
 					.addLast("decoder", decoder)
 					.addLast("idleStateHandler", new IdleStateHandler(0, 0, conf.connectionTimeoutMS() / 1000))
 					.addLast("handler", channelHandler);
