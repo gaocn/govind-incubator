@@ -1,4 +1,4 @@
-package govind.incubator.buffer;
+package govind.incubator.network;
 
 import com.google.common.base.Preconditions;
 import govind.incubator.network.buffer.ManagedBuffer;
@@ -58,7 +58,7 @@ public class TestManagedBuffer extends ManagedBuffer {
 
 	@Override
 	public boolean equals(Object o) {
-		if (o  instanceof ManagedBuffer) {
+		if (o instanceof ManagedBuffer) {
 			try {
 				ByteBuffer buffer = ((ManagedBuffer) o).nioByteBuffer();
 				if (buffer.remaining() != len) {

@@ -1,8 +1,10 @@
 package govind.incubator.network.util;
 
+import com.google.common.base.Charsets;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import govind.incubator.network.protocol.codec.TransportFrameDecoder;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -14,6 +16,9 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
 import java.lang.reflect.Field;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -101,5 +106,30 @@ public class NettyUtil {
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+
+	/**
+	 * Convert the given byte buffer to a string. The resulting string can be
+	 * converted back to the same byte buffer through stringToBytes(String).
+	 */
+	public static String bytesToString(ByteBuffer b) {
+		return Unpooled.wrappedBuffer(b).toString(Charsets.UTF_8);
+	}
+
+	/**
+	 * Convert the given string to a byte buffer. The resulting buffer can be
+	 * converted back to the same string through {@link #bytesToString(ByteBuffer)}.
+	 */
+	public static ByteBuffer stringToBytes(String s) {
+		return Unpooled.wrappedBuffer(s.getBytes(Charsets.UTF_8)).nioBuffer();
+	}
+
+	public static String getLocalHost() {
+		try {
+			return InetAddress.getLocalHost().getHostAddress();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

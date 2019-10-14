@@ -106,7 +106,7 @@ public class FileSegmentManagedBuffer extends ManagedBuffer{
 				fileChannel.position(offset);
 				ByteBuffer buffer = ByteBuffer.allocate((int) length);
 
-				while (buffer.remaining() != -1) {
+				while (buffer.remaining() != 0) {
 					if(fileChannel.read(buffer) == -1) {
 						//读取到文件末尾
 						throw new IOException(String.format("Reach EOF before filling buffer\n " +

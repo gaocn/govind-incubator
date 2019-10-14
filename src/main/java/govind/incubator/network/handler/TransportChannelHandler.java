@@ -44,7 +44,7 @@ public class TransportChannelHandler extends SimpleChannelInboundHandler<Message
 		this.client = client;
 		this.requestHandler = requestHandler;
 		this.responseHandler = responseHandler;
-		this.requestTimeoutNS = requestTimeoutNS * 1000L * 1000;
+		this.requestTimeoutNS = requestTimeoutSec * 1000 * 1000;
 		this.closeIdleConnections = closeIdleConnections;
 	}
 

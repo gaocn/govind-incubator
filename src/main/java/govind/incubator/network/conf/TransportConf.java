@@ -65,7 +65,7 @@ public class TransportConf {
 	}
 
 	public int connectionTimeoutMS() {
-		return conf.getInt(NETWORK_IO_CONNECTIONTIMEOUT_KEY, 120) * 100;
+		return conf.getInt(NETWORK_IO_CONNECTIONTIMEOUT_KEY, 120) * 1000;
 	}
 
 	public int backlog() {

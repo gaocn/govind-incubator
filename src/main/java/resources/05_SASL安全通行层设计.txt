@@ -1,0 +1,36 @@
+继承     实现     关联
+ +       *
+/|\     /|\      /|\
+ |       |        |
+
+
+
+--------------------------------------------------       --------------------------------------------------
+| TransportClientBootstrap                       |       | TransportServerBootstrap                       |
+| + void doBootstrap(TransportClient, Channel)   |       | + void doBootstrap(Channel, RpcHandler)        |
+--------------------------------------------------       --------------------------------------------------
+
+
+-------------------------------------------------        --------------------------------------------------
+| SaslClientBootstrap                           |        | SaslServerBootstrap                            |
+| + boolean getBoolean(String name, boolean due)|        | + boolean getBoolean(String name, booleanValue)|
+---------+---------------------------------------        ---------+----------------------------------------
+
+
+
+
+SaslEncryption
+
+SaslEncryptionBackend
+
+
+SaslMessage
+
+SaslRpcHandler
+
+
+SecretKeyHolder
+
+SparkSaslClient implements SaslEncryptionBackend
+
+SparkSaslServer implements SaslEncryptionBackend

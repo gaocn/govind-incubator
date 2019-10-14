@@ -90,7 +90,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 	private void processOneWayMessge(OneWayMessage req) {
 		try {
 			rpcHandler.receive(requestClient, req.body().nioByteBuffer());
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.error("RpcHandler处理One-Way-Message时出错：{}", e.getMessage());
 		} finally {
 			req.body().release();
@@ -110,7 +110,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 					respond(new RpcFailure(req.requestId, cause.getMessage()));
 				}
 			});
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.error("Rpc请求id为{}, RpcHandler处理RpcRequest时出错:{}", req.requestId, e.getMessage());
 			respond(new RpcFailure(req.requestId, e.getMessage()));
 		} finally {

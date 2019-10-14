@@ -206,9 +206,10 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 					StreamInteceptor inteceptor = new StreamInteceptor(this, resp.streamId, resp.byteCount, callback);
 					TransportFrameDecoder frameDecoder = (TransportFrameDecoder) associatedChannel.pipeline().get(TransportFrameDecoder.HANDLER_NAME);
 					frameDecoder.setInteceptor(inteceptor);
+					log.debug("安装StreamInterceptor: {}", inteceptor);
 					streamActive = true;
 				} catch (Exception e) {
-					log.error("安装StreamInteceptor出错");
+					log.error("安装StreamInterceptor出错");
 					deactiveStream();
 				}
 			} else {
@@ -224,7 +225,6 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	}
 
 	private void processStreamFailure(StreamFailure resp) {
-		final String remoteAddr = associatedChannel.remoteAddress().toString();
 		StreamCallback callback = streamCallbacks.poll();
 
 		if (callback != null) {

@@ -81,7 +81,7 @@
         <!-- hbase -->
         <dependency>
             <groupId>org.apache.hbase</groupId>
-            <artifactId>hbase-requestClient</artifactId>
+            <artifactId>hbase-client</artifactId>
             <version>0.98.7-hadoop2</version>
             <exclusions>
                 <exclusion>

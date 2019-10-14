@@ -101,13 +101,13 @@ public class MessageWithHeader extends AbstractReferenceCounted implements FileR
 	 */
 	private long totalBytesTransferred;
 
-	public MessageWithHeader(ByteBuf header, Object body, int headerLength, long bodyLength) {
+	public MessageWithHeader(ByteBuf header, Object body, long bodyLength) {
 
 		assert body instanceof ByteBuf || body instanceof FileRegion: "body类型只能为ByteBuf或FileRegion之一！";
 
 		this.header = header;
 		this.body = body;
-		this.headerLength = headerLength;
+		this.headerLength = header.readableBytes();
 		this.bodyLength = bodyLength;
 	}
 
@@ -177,7 +177,7 @@ public class MessageWithHeader extends AbstractReferenceCounted implements FileR
 				target.write(nioBuffer) :
 				writeNioBuffer(target, nioBuffer);
 		buf.skipBytes(writtenBytes);
-		return 0;
+		return writtenBytes;
 	}
 
 	/**

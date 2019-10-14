@@ -139,7 +139,7 @@ public class TransportClient implements Closeable {
 		});
 
 		try {
-			return result.get();
+			return result.get(timeoutMs, TimeUnit.MILLISECONDS);
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -169,7 +169,7 @@ public class TransportClient implements Closeable {
 		channel.writeAndFlush(new ChunkFetchRequest(streamChunkId))
 				.addListener(future -> {
 					if (future.isSuccess()) {
-						long timeTaked = System.currentTimeMillis();
+						long timeTaked = System.currentTimeMillis() - startTime;
 						log.info("异步发送ChunkFetch请求到{}，耗时：{}ms", serverAddr, timeTaked);
 					} else {
 						String error = String.format("异步发送ChunkFetch请求到%s失败：%s", serverAddr, future.cause().getMessage());

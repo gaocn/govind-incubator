@@ -117,7 +117,6 @@ public class ChunkFetchIntegrationSuite {
 		clientFactory = context.createClientFactory();
 	}
 
-
 	@AfterClass
 	public static void tearDown() throws IOException {
 		bufferChunk.release();
@@ -181,17 +180,41 @@ public class ChunkFetchIntegrationSuite {
 		assertEquals(res.successChunks, Sets.newHashSet(BUFFER_CHUNK_INDEX));
 		assertTrue(res.failedChunks.isEmpty());
 		assertBufferListsEquals(res.buffers, Lists.newArrayList(bufferChunk));
+		res.releaseBuffers();
 	}
 
+	@Test
+	public void testFetchFileChunk() throws IOException, InterruptedException {
+		FetchResult res = fetchChunks(Lists.newArrayList(FILE_CHUNK_INDEX));
+		assertEquals(res.successChunks,  Sets.newHashSet(FILE_CHUNK_INDEX));
+		assertTrue(res.failedChunks.isEmpty());
+		assertBufferListsEquals(res.buffers, Lists.newArrayList(fileChunk));
+		res.releaseBuffers();
+	}
 
+	@Test
+	public void testFetchNonExistentChunk() throws IOException, InterruptedException {
+		FetchResult res = fetchChunks(Lists.newArrayList(12345));
+		assertTrue(res.successChunks.isEmpty());
+		assertEquals(res.failedChunks, Sets.newHashSet(12345));
+		assertTrue(res.buffers.isEmpty());
+	}
 
+	@Test
+	public void testFetchBothChunks() throws IOException, InterruptedException {
+		FetchResult res = fetchChunks(Lists.newArrayList(FILE_CHUNK_INDEX, BUFFER_CHUNK_INDEX));
+		assertEquals(res.successChunks, Sets.newHashSet(FILE_CHUNK_INDEX, BUFFER_CHUNK_INDEX));
+		assertTrue(res.failedChunks.isEmpty());
+		assertBufferListsEquals(res.buffers,  Lists.newArrayList(fileChunk, bufferChunk));
+	}
 
-
-
-
-
-
-
+	@Test
+	public void testFetchChunkAndNonExistent() throws IOException, InterruptedException {
+		FetchResult res = fetchChunks(Lists.newArrayList(FILE_CHUNK_INDEX, 1234));
+		assertEquals(res.successChunks, Sets.newHashSet(FILE_CHUNK_INDEX));
+		assertEquals(res.failedChunks, Sets.newHashSet(1234));
+		assertBufferListsEquals(res.buffers,  Lists.newArrayList(fileChunk));
+	}
 
 	private void assertBufferListsEquals(List<ManagedBuffer> list0, List<ManagedBuffer> list1) throws IOException {
 		assertEquals(list0.size(),  list1.size());
@@ -209,7 +232,6 @@ public class ChunkFetchIntegrationSuite {
 			assertEquals(nio0.get(), nio1.get());
 		}
 	}
-
 	private String getLocalHost() {
 		try {
 			return InetAddress.getLocalHost().getHostAddress();
@@ -218,6 +240,4 @@ public class ChunkFetchIntegrationSuite {
 		}
 		return null;
 	}
-
-
 }
