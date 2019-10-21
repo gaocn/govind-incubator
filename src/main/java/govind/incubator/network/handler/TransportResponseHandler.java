@@ -3,6 +3,7 @@ package govind.incubator.network.handler;
 import govind.incubator.network.inteceptor.StreamInteceptor;
 import govind.incubator.network.protocol.*;
 import govind.incubator.network.protocol.codec.TransportFrameDecoder;
+import govind.incubator.network.util.NettyUtil;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
@@ -128,7 +129,7 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	@Override
 	public void exceptionCaught(Throwable cause) throws Exception {
 		if (numOfOutstandingRequests() > 0) {
-			final String remoteAddr = associatedChannel.remoteAddress().toString();
+			final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 			log.error("来自{}的连接异常，尚有{}个请求未被处理", remoteAddr, numOfOutstandingRequests());
 			failOutstandingRequest(cause);
 		}
@@ -137,7 +138,7 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	@Override
 	public void channelUnregistered() {
 		if (numOfOutstandingRequests() > 0) {
-			final String remoteAddr = associatedChannel.remoteAddress().toString();
+			final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 			log.error("来自{}的连接异常，尚有{}个请求未被处理", remoteAddr, numOfOutstandingRequests());
 
 			failOutstandingRequest(new IOException("来自" + remoteAddr + "的连接被关闭"));
@@ -165,7 +166,7 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	}
 
 	private void processRpcResponse(RpcResponse resp) {
-		final String remoteAddr = associatedChannel.remoteAddress().toString();
+		final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 		RpcCallback callback = outstandingRpcs.get(resp.requestId);
 
 		if (callback != null) {
@@ -184,7 +185,7 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	}
 
 	private void processRpcFailure(RpcFailure resp) {
-		final String remoteAddr = associatedChannel.remoteAddress().toString();
+		final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 		RpcCallback callback = outstandingRpcs.get(resp.requestId);
 
 		if (callback != null) {
@@ -192,12 +193,11 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 			callback.onFailure(new RuntimeException(resp.error));
 		} else {
 			log.warn("忽略来自{}({} bytes)的Rpc响应{}，因为没有注册对应的处理器", remoteAddr, resp.body().size(), resp.requestId);
-			resp.body().release();
 		}
 	}
 
 	private void processStreamResponse(StreamResponse resp) {
-		final String remoteAddr = associatedChannel.remoteAddress().toString();
+		final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 		StreamCallback callback = streamCallbacks.poll();
 
 		if (callback != null) {
@@ -239,7 +239,7 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	}
 
 	private void processChunkResponse(ChunkFetchSuccess resp) {
-		final String remoteAddr = associatedChannel.remoteAddress().toString();
+		final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 		ChunkReceivedCallback callback = outstandingFetches.get(resp.streamChunkId);
 
 		if (callback != null) {
@@ -257,15 +257,11 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 	}
 
 	private void processChunkFailure(ChunkFetchFailure resp) {
-		final String remoteAddr = associatedChannel.remoteAddress().toString();
+		final String remoteAddr = NettyUtil.getRemoteAddress(associatedChannel);
 		ChunkReceivedCallback callback = outstandingFetches.get(resp.streamChunkId);
 		if (callback != null) {
 			outstandingFetches.remove(resp.streamChunkId);
-			try {
-				callback.onFailure(resp.streamChunkId.chunkIdx, new RuntimeException(String.format("获取Chunk(%s)出错：%s", resp.streamChunkId, resp.error)));
-			} finally {
-				resp.body().release();
-			}
+			callback.onFailure(resp.streamChunkId.chunkIdx, new RuntimeException(String.format("获取Chunk(%s)出错：%s", resp.streamChunkId, resp.error)));
 		} else {
 			log.warn("忽略来自{}({} bytes)的ChunkFetch响应{}，因为没有注册对应的处理器", remoteAddr, resp.body().size(), resp.streamChunkId);
 			resp.body().release();
