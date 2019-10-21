@@ -23,9 +23,13 @@ import org.junit.Test;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.sql.Time;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import static junit.framework.TestCase.*;
 
@@ -152,13 +156,77 @@ public class StreamSuite {
 	public void testSmallLengthStream() throws Throwable {
 		TransportClient client = clientFactory.createClient(NettyUtil.getLocalHost(), server.getPort());
 		try {
-			StreamTask task = new StreamTask(client, "smallBuffer", TimeUnit.SECONDS.toMillis(5));
+			StreamTask task = new StreamTask(client, "smallBuffer", TimeUnit.SECONDS.toMillis(20));
 			task.run();
 			task.check();
 		} finally {
 			client.close();
 		}
+	}
 
+	@Test
+	public void testLargeLengthStream() throws Throwable {
+		TransportClient client = clientFactory.createClient(NettyUtil.getLocalHost(), server.getPort());
+
+		try {
+			StreamTask task = new StreamTask(client, "largeBuffer", TimeUnit.SECONDS.toMillis(5));
+			task.run();
+			task.check();
+		} finally {
+			client.close();
+		}
+	}
+
+	@Test
+	public void testFileStream() throws Throwable {
+		TransportClient client = clientFactory.createClient(NettyUtil.getLocalHost(), server.getPort());
+		try {
+			StreamTask task = new StreamTask(client, "file", TimeUnit.SECONDS.toMillis(5));
+			task.run();
+			task.check();
+		} finally {
+			client.close();
+		}
+	}
+
+	@Test
+	public void testMultipleStream() throws Throwable {
+		TransportClient client = clientFactory.createClient(NettyUtil.getLocalHost(), server.getPort());
+
+		try {
+			for (int i = 0; i < 20; i++) {
+				String streamType = STREAMS[i % STREAMS.length];
+				StreamTask task = new StreamTask(client, streamType, TimeUnit.SECONDS.toMillis(5));
+				task.run();
+				task.check();
+			}
+		} finally {
+			client.close();
+		}
+	}
+
+	@Test
+	public void testConcurrentStreams() throws Throwable {
+		ExecutorService executor = Executors.newFixedThreadPool(20);
+		TransportClient client = clientFactory.createClient(NettyUtil.getLocalHost(), server.getPort());
+
+		try {
+			ArrayList<StreamTask> tasks = new ArrayList<>();
+			for (int i = 0; i < 20; i++) {
+				StreamTask task = new StreamTask(client, STREAMS[i % STREAMS.length], TimeUnit.SECONDS.toMillis(5));
+				tasks.add(task);
+				executor.submit(task);
+			}
+			executor.shutdown();
+
+			assertTrue("等待超时，线程池任务未执行完毕", executor.awaitTermination(30, TimeUnit.SECONDS));
+			for (StreamTask task : tasks) {
+				task.check();
+			}
+		}  finally {
+			executor.shutdownNow();
+			client.close();
+		}
 	}
 
 	private static class StreamTask implements Runnable {
@@ -258,7 +326,7 @@ public class StreamSuite {
 				}
 			}
 
-			assertTrue("等待Stream响应超时", !callback.completed);
+			assertTrue("等待Stream响应超时", callback.completed);
 			assertNull(callback.cause);
 		}
 	}

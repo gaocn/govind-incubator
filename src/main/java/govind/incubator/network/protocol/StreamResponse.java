@@ -11,7 +11,7 @@ public class StreamResponse extends AbstractResponseMessage {
 	public final long byteCount;
 
 	public StreamResponse(ManagedBuffer body, String streamId, long byteCount) {
-		super(body, true);
+		super(body, false);
 		this.streamId = streamId;
 		this.byteCount = byteCount;
 	}

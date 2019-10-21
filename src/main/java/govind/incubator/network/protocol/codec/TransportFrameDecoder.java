@@ -72,13 +72,13 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 					if (frame == null) {
 						break;
 					}
-					log.debug("没有Intercepter，直接从缓存区中解析一条帧发送给下一个Handler处理。frame: {}", frame);
+					//没有Intercepter，直接从缓存区中解析一条帧发送给下一个Handler处理
 					ctx.fireChannelRead(frame);
 				} else {
-					log.debug("设置了拦截器，则将接收到的数据直接交给拦截器处理");
 					ByteBuf first = buffers.getFirst();
 					int available = first.readableBytes();
 
+					//log.debug("设置了拦截器，则将接收到的数据直接交给拦截器处理,{}", first);
 					if (feedInterceptor(first)) {
 						assert !first.isReadable() : "inteceptor is alive, but buffer has uncomsumed data!";
 					}
