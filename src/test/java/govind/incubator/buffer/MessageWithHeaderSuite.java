@@ -1,4 +1,4 @@
-package govind.incubator.network;
+package govind.incubator.buffer;
 
 import govind.incubator.network.protocol.MessageWithHeader;
 import io.netty.buffer.ByteBuf;

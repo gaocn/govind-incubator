@@ -1,5 +1,6 @@
 package govind.incubator.network;
 
+import govind.incubator.buffer.TestManagedBuffer;
 import govind.incubator.network.protocol.*;
 import govind.incubator.network.protocol.codec.MessageDecoder;
 import govind.incubator.network.protocol.codec.MessageEncoder;

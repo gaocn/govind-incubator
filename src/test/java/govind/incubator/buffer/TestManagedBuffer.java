@@ -1,4 +1,4 @@
-package govind.incubator.network;
+package govind.incubator.buffer;
 
 import com.google.common.base.Preconditions;
 import govind.incubator.network.buffer.ManagedBuffer;
