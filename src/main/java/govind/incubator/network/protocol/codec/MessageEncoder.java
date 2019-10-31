@@ -83,7 +83,7 @@ public class MessageEncoder extends MessageToMessageEncoder<Message> {
 		assert header.writableBytes() == 0 : "可写字节数应该为0";
 
 		if (body != null && bodyLength > 0) {
-			out.add(new MessageWithHeader(header, body, headerLen, bodyLength));
+			out.add(new MessageWithHeader(header, body, bodyLength));
 		} else {
 			out.add(header);
 		}

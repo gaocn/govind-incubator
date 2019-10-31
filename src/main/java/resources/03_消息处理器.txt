@@ -1,21 +1,44 @@
-
-                                                                                +       *
-                                                                               /|\     /|\     /|\
-                                                                                |继承    |实现    |关联
-                             --------------------------------------
-                             | Messagehandler<T extends Message>  |
-                             |  + void handle(T message)          |
-                             |  + void exceptionCaught(Throwable) |
-                             |  + void channelUnregistered()      |
-                             ---------+------------------+---------
-                                     /|\                /|\
-                                      |                  |
-                     <RequestMessage> |                  |  <ResponseMessage>
-                      ----------------|                  |----------------------------
+继承     实现     关联
+ +       *
+/|\     /|\      /|\
+ |       |        |
+                          ----------------------------------------
+                          | SimpleChannelInboundHandler<Message> |
+                          | + void exceptionCaught(ctx, cause)   |
+                          | + void channelUnregistered(ctx)      |
+                          | + void channelRead0(ctx, Message)    |
+                          | + void userEventTriggered(ctx, evt)  |
+                          -------------------*--------------------
+                                            /|\
+                                             |
+                                             |
+                                             |
+                        -----------------------------------------------
+                        | TransportChannelHandler                     |
+                        |  - TransportClient client                   |
+         ---------------|  - TransportRequestHandler requestHandler   |
+         |              |  - TransportResponseHandler responseHandler |----------------------------
+         |              |  - long requestTimeoutNs                    |                           |
+         |              |  - boolean closeIdleConnections             |                           |
+         |              -----------------------------------------------                           |
+         |              |                                             |
+         |              -----------------------------------------------                           |
+         |                                                                                        |
+         |                                                                                        |
+         |                   --------------------------------------                               |
+         |                   | Messagehandler<T extends Message>  |                               |
+         |                   |  + void handle(T message)          |                               |
+         |                   |  + void exceptionCaught(Throwable) |                               |
+         |                   |  + void channelUnregistered()      |                               |
+         |                   ---------+------------------+---------                               |
+         |                           /|\                /|\                                       |
+         |                            |                  |                                        |
+         |           <RequestMessage> |                  |  <ResponseMessage>                     |
+        \|/           ----------------|                  |----------------------------           \|/
  ---------------------|---------------------------          -------------------------|-----------------------
  | TransporotRequestHandler                      |          |  TransportResponseHandler                     |
  |  - Channel channel                            |          |   - Channel channel                           |
- |  - TransportClient requestClient                     |          |   - Map<StreamChunkId, ChunkReceivedCallback> |---
+ |  - TransportClient requestClient              |          |   - Map<StreamChunkId, ChunkReceivedCallback> |--|
  |  - RpcHandler rpcHandler                      |----      |   - Map<Long, RpcResponseCallback> rpcs       |--|---|
  |  - StreamManager streamManager                |   |      |   - Queue<StreamCallback>  streamCallbacks    |--|---|-|
  -------------------------------------------------   |      |   - volatile boolean streamActive             |  |   | |
@@ -74,41 +97,3 @@
            |--------------------------------------------------|                  | + Channel associatedChannel        |
            | + long registerStream(appId, buffers)            |                  | + int curChunkIdx                  |
            ----------------------------------------------------                  --------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-TransportContext
-    -> TransportClientFactory(TransportClient)
-    -> TransprotServer
-
-
-
-TransportChannelHandler
-    TransporotRequestHander
-    TransportResponseHandler
-
-
-
-
-
-

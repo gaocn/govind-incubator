@@ -1,9 +1,8 @@
 package govind.incubator.network.protocol;
 
+import com.google.common.base.Objects;
 import govind.incubator.network.util.CodecUtil;
 import io.netty.buffer.ByteBuf;
-
-import java.util.Objects;
 
 public class RpcFailure extends AbstractMessage implements ResponseMessage {
 
@@ -44,7 +43,10 @@ public class RpcFailure extends AbstractMessage implements ResponseMessage {
 
 	@Override
 	public String toString() {
-		return Objects.toString(this);
+		return Objects.toStringHelper(this)
+				.add("requestId", requestId)
+				.add("error", error)
+				.toString();
 	}
 
 	@Override

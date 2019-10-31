@@ -1,8 +1,7 @@
 package govind.incubator.network.protocol;
 
+import com.google.common.base.Objects;
 import io.netty.buffer.ByteBuf;
-
-import java.util.Objects;
 
 public class ChunkFetchRequest extends AbstractMessage implements RequestMessage{
 	public final StreamChunkId streamChunkId;
@@ -32,8 +31,15 @@ public class ChunkFetchRequest extends AbstractMessage implements RequestMessage
 	}
 
 	@Override
+	public String toString() {
+		return Objects.toStringHelper(this)
+				.add("streamChunkId", streamChunkId)
+				.toString();
+	}
+
+	@Override
 	public int hashCode() {
-		return Objects.hashCode(this);
+		return Objects.hashCode(streamChunkId);
 	}
 
 	@Override

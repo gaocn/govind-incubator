@@ -33,19 +33,19 @@ public class MessageDecoder extends MessageToMessageDecoder<ByteBuf> {
 			case ChunkFetchSuccess:
 				return ChunkFetchSuccess.decode(buf);
 			case ChunkFetchFailure:
-				ChunkFetchFailure.decode(buf);
+				return ChunkFetchFailure.decode(buf);
 			case RpcRequest:
 				return RpcRequest.decode(buf);
 			case RpcResponse:
 				return RpcResponse.decode(buf);
 			case RpcFailure:
-				RpcFailure.decode(buf);
+				return RpcFailure.decode(buf);
 			case StreamRequest:
-				StreamRequest.decode(buf);
+				return StreamRequest.decode(buf);
 			case StreamResponse:
-				StreamResponse.decode(buf);
+				return StreamResponse.decode(buf);
 			case StreamFailure:
-				StreamFailure.decode(buf);
+				return StreamFailure.decode(buf);
 			case OneWayMessage:
 				return OneWayMessage.decode(buf);
 			default:

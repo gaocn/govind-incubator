@@ -1,0 +1,107 @@
+继承     实现     关联
+ +       *
+/|\     /|\      /|\
+ |       |        |
+
+
+                            -------------------------------------------------------------------------------
+ |------------------------->| TransportClientFactory                                                      |<----------------------
+ |                          | - TransportConf conf                                                        |                      |
+ |                          | - RpcHandler rpcHandler                                                     |                      |
+ |                          | - MessageEncoder encoder                                                    |                      |
+ |                          | - MessageDecoder decoder                                                    |                      |
+ |                          | - boolean closeIdleConnections                                              |                      |
+ |                          -------------------------------------------------------------------------------                      |
+ |                          | + TransportChannelHandler initializePipeline(SocketChannel )                |                      |
+ |                          | + TransportChannelHandler initializePipeline(SocketChannel, RpcHandler)     |                      |
+ |                          | - TransportChannelHandler createChannelHandler(SocketChannel, RpcHandler)   |                      |
+ |                          |                                                                             |                      |
+ |                          | + TransportClientFactory createClientFactory()                              |                      |
+ |                          | + TransportClientFactory createClientFactory(List<TransportClientBootstrap>)|                      |
+ |                          |                                                                             |                      |
+ |                          | + TransportServer createServer()                                            |                      |
+ |                          | + TransportServer createServer(List<TransportServerBootstrap>)              |                      |
+ |                          | + TransportServer createServer(port, List<TransportServerBootstrap>)        |                      |
+ |                          | + TransportServer createServer(host, port, List<TransportServerBootstrap>)  |                      |
+ |                           -------------------------------------------------------------------------------                     |
+ |                                                                                                                               |
+ |                                                                                                                               |
+ |           --------------------------------------------------        --------------------------------------------------        |
+ | |-------->| TransportClientBootstrap                       |        | TransportServerBootstrap                       |<----|  |
+ | |         | + void doBootstrap(TransportClient, Channel)   |        | + void doBootstrap(Channel, RpcHandler)        |     |  |
+ | |         --------------------------------------------------        --------------------------------------------------     |  |
+ | |                                                                                                                          |  |
+ | |                                                                                                                          |  |
+ | |                                                  -----------------------                                                 |  |
+ | |                                                  |   Closeable         |                                                 |  |
+ | |    -------------------------------------------->*|   + void close()    |                                                 |  |
+ | |    |                                             ----*-------------*----                                                 |  |
+ | |    |                                                /|\           /|\                                                    |  |
+ | |    |                                                 |             |                                                     |  |
+ | |    |    --------------------------------------------------      --------------------------------------------------       |  |
+ | |    |    | TransportClient                                |      | TransportServer                                |       |  |
+ | |    |    | - String clientId                              |      | - TransportConf conf                           |       |  |
+ | |    |    | - Channel channel                              |      | - RpcHandler rpcHandler                        |       |  |
+ | |    |    | - TransportResponseHandler responseHandler     |      | - TransportContext context                     |-------|---
+ | |    |    | - volatile boolean timedOut                    |      | - List<TransportServerBootstrap> bootstraps    |--------
+ | |    |    --------------------------------------------------      | - ServerBootstrap bootstrap                    |
+ | |    |    | + void send(ByteBuffer message)                |      | - ChannelFuture future                         |
+ | |    |    | + long sendRpc(ByteBuffer,  RpcCallback)       |      | - int port = -1                                |
+ | |    |    | + ByteBuffer sendRpcSync(ByteBuffer, timeoutMs)|      --------------------------------------------------
+ | |    |    | + void fetchChunk(streamId,chunkIdx, callback) |      | - void init(String hostToBind, int portToBind) |
+ | |    |    | + void stream(String streamId, StreamCallback) |      | + int getPort()                                |
+ | |    |    | + void removeRpcRequest(long requestId)        |      --------------------------------------------------
+ | |    |    | + boolean isActive()                           |
+ | |    |    --------------------------------------------------
+ | |    |                                     /|\
+ | |    |                                      |
+ | |    |                                      |
+ | |    |                             --------------------------------
+ | |    |                             | ClientPool                   |<-----------
+ | |    |                             | + TransportClient[] clients  |           |
+ | |    |                             | + Object[] locks             |           |
+ | |    |                             --------------------------------           |
+ | |    |                                                                        |
+ | |    |                                                                        |
+ | |    |    -----------------------------------------------------------------|  |
+ | |    |----| TransportClientFactory                                         |  |
+ | |         | - TransportConf conf                                           |  |
+ |-|---------| - TransportContext context                                     |  |
+   |---------| - List<TransportClientBootstrap> clientBootstraps              |  |
+             | - ConcurrentHashMap<SocketAddress, ClientPool> connectionPools |--|
+             |                                                                |
+             | - Random rand                                                  |
+             | - int numConnectionsPerPeer                                    |
+             | - EventLoopGroup  workerGroup                                  |
+             | - PooledByteBufAllocator pooledAllocator                       |
+             | - Class<? extends Channel> socketChannelClass                  |
+             ------------------------------------------------------------------
+             | + TransportClient createClient(remoteHost, remotePort)         |
+             | + TransportClient createClient(InetSocketAddress address)      |
+             | + TransportClient createUnmanagedClient(remoteHost, remotePort)|
+             ------------------------------------------------------------------
+ 说明：
+  （1）根据TransportConf.ioMode()确定下面值：
+     1、EventLoopGroup：NioEventLoopGroup(numThreads, factory)、EpollEventLoopGroup(numThreads, factory)
+     2、socketChannelClass：NioSocketChannel.class、EpollSocketChannel.class
+     3、serverSocketChannelClass：NioServerSocketChannel.class、EpollServerSocketChannel.class
+  （2）自定义PooledByteBufAllocator为TransportClient禁止其中的thread-local cache，因为ByteBuf虽然是有event loop thread分配但是释放却是由executor thread完成，若使用thread local cahce会出现ByteBuf回收延迟，最终导致内存泄露。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

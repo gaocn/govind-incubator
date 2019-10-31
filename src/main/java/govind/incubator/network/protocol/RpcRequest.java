@@ -1,5 +1,6 @@
 package govind.incubator.network.protocol;
 
+import com.google.common.base.Objects;
 import govind.incubator.network.buffer.ManagedBuffer;
 import govind.incubator.network.buffer.NettyManagedBuffer;
 import io.netty.buffer.ByteBuf;
@@ -39,6 +40,11 @@ public class RpcRequest extends AbstractMessage implements RequestMessage {
 		long requestId = buf.readLong();
 		buf.readInt();
 		return new RpcRequest(requestId, new NettyManagedBuffer(buf.retain()));
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hashCode(requestId);
 	}
 
 	@Override

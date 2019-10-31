@@ -1,6 +1,6 @@
 package govind.incubator.network.handler;
 
-import govind.incubator.network.TransportClient;
+import govind.incubator.network.client.TransportClient;
 import lombok.extern.slf4j.Slf4j;
 
 import java.nio.ByteBuffer;

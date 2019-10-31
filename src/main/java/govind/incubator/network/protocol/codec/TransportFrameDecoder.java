@@ -1,5 +1,6 @@
 package govind.incubator.network.protocol.codec;
 
+import com.google.common.base.Preconditions;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -71,13 +72,13 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 					if (frame == null) {
 						break;
 					}
-					log.debug("没有Intercepter，直接从缓存区中解析一条帧发送给下一个Handler处理。frame: {}", frame);
+					//没有Intercepter，直接从缓存区中解析一条帧发送给下一个Handler处理
 					ctx.fireChannelRead(frame);
 				} else {
-					log.debug("设置了拦截器，则将接收到的数据直接交给拦截器处理");
 					ByteBuf first = buffers.getFirst();
 					int available = first.readableBytes();
 
+					//log.debug("设置了拦截器，则将接收到的数据直接交给拦截器处理,{}", first);
 					if (feedInterceptor(first)) {
 						assert !first.isReadable() : "inteceptor is alive, but buffer has uncomsumed data!";
 					}
@@ -126,8 +127,6 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 	private ByteBuf decodeNext() {
 		//1. 获取帧长度
 		long frameSize = decodeFrameSize();
-		assert frameSize < MAX_FRAME_SIZE : "帧长度过大：" + frameSize;
-		assert  frameSize > 0 : "帧长度应该大于零";
 
 		//2. 若当前缓存的数据量小于frameSize，则接收的帧不完整，继续接收
 		if (frameSize == UNKNOWN_FRAME_SIZE || totalSize < frameSize) {
@@ -136,10 +135,14 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 
 		//3. 已接收至少一个完整帧，可以进行解析，同时重置nextFrameSize为下一帧做准备
 		nextFrameSize = UNKNOWN_FRAME_SIZE;
+
+		Preconditions.checkArgument(frameSize < MAX_FRAME_SIZE, "帧长度过大：%s", frameSize);
+		Preconditions.checkArgument(frameSize > 0, "帧长度应该为正数：%s", frameSize);
+
 		int remaining = (int) frameSize;
 
 		//4.1 若buffers中的一个缓存中包含全部frameSize个数据，则获取后直接返回
-		if (buffers.getFirst().readableBytes() > remaining) {
+		if (buffers.getFirst().readableBytes() >= remaining) {
 			return nextBufferForFrame(remaining);
 		}
 
@@ -165,7 +168,7 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 		}
 
 		ByteBuf buf = buffers.getFirst();
-		if (buf.readableBytes() > FRAME_LENGTH_SIZE) {
+		if (buf.readableBytes() >= FRAME_LENGTH_SIZE) {
 			nextFrameSize = buf.readLong() - FRAME_LENGTH_SIZE;
 			totalSize -= FRAME_LENGTH_SIZE;
 			if (!buf.isReadable()) {
@@ -222,9 +225,9 @@ public class TransportFrameDecoder extends ChannelInboundHandlerAdapter {
 	 * @param buf
 	 * @return
 	 */
-	private boolean feedInterceptor(ByteBuf buf) {
+	private boolean feedInterceptor(ByteBuf buf) throws Exception {
 		if (inteceptor != null && !inteceptor.handle(buf)) {
-			return true;
+			inteceptor = null;
 		}
 		return inteceptor != null;
 	}

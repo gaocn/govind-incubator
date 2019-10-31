@@ -1,6 +1,6 @@
 package govind.incubator.network.handler;
 
-import govind.incubator.network.TransportClient;
+import govind.incubator.network.client.TransportClient;
 import govind.incubator.network.buffer.ManagedBuffer;
 import govind.incubator.network.buffer.NioManagedBuffer;
 import govind.incubator.network.protocol.*;
@@ -83,6 +83,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 				log.info("关闭StreamManger失败，原因：{}", e.getMessage());
 			}
 		}
+		rpcHandler.connectionTerminated(requestClient);
 	}
 
 	/***************** private method *********************/
@@ -90,7 +91,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 	private void processOneWayMessge(OneWayMessage req) {
 		try {
 			rpcHandler.receive(requestClient, req.body().nioByteBuffer());
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.error("RpcHandler处理One-Way-Message时出错：{}", e.getMessage());
 		} finally {
 			req.body().release();
@@ -110,7 +111,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 					respond(new RpcFailure(req.requestId, cause.getMessage()));
 				}
 			});
-		} catch (IOException e) {
+		} catch (Exception e) {
 			log.error("Rpc请求id为{}, RpcHandler处理RpcRequest时出错:{}", req.requestId, e.getMessage());
 			respond(new RpcFailure(req.requestId, e.getMessage()));
 		} finally {

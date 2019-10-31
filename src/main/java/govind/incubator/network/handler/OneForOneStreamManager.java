@@ -1,7 +1,7 @@
 package govind.incubator.network.handler;
 
 import com.google.common.base.Preconditions;
-import govind.incubator.network.TransportClient;
+import govind.incubator.network.client.TransportClient;
 import govind.incubator.network.buffer.ManagedBuffer;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
