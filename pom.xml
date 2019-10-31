@@ -18,7 +18,7 @@
         <scala.binary.version>2.2.1</scala.binary.version>
         <junit.test.version>4.11</junit.test.version>
         <mockito.version>2.23.0</mockito.version>
-        <spark.version>2.3.1</spark.version>
+        <spark.version>2.4.4</spark.version>
         <io.netty.version>4.0.29.Final</io.netty.version>
     </properties>
 
