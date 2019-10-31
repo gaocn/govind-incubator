@@ -239,7 +239,7 @@ public class TransportClient implements Closeable {
 	}
 
 	public void setClientId(String clientId) {
-		if (StringUtils.isNoneEmpty(clientId)) {
+		if (StringUtils.isNoneEmpty(this.clientId)) {
 			throw new IllegalArgumentException("clientId已存在，不能修改");
 		}
 		this.clientId = clientId;

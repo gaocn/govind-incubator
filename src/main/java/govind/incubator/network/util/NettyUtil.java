@@ -132,4 +132,17 @@ public class NettyUtil {
 		}
 		return null;
 	}
+
+	public static byte[] bufToArray(ByteBuffer buffer) {
+		byte[] data;
+		if (buffer.hasArray() &&
+			buffer.arrayOffset() == 0 &&
+			buffer.array().length == buffer.remaining()) {
+			return buffer.array();
+		} else {
+			data = new byte[buffer.remaining()];
+			buffer.get(data);
+			return data;
+		}
+	}
 }

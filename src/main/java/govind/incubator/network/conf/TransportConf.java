@@ -1,5 +1,7 @@
 package govind.incubator.network.conf;
 
+import com.google.common.primitives.Ints;
+
 /**
  * @Author: 高文文
  * Project Name: govind-incubator
@@ -126,5 +128,26 @@ public class TransportConf {
 	 */
 	public int memoryMapBytes() {
 		return conf.getInt("storage.memoryMapThreshold", 2) * 1024 * 1024;
+	}
+
+	/**
+	 * Whether the server should enforce encryption on SASL-authenticated connections.
+	 */
+	public boolean saslServerAlwaysEncrypt() {
+		return conf.getBoolean("network.sasl.serverAlwaysEncrypt", false);
+	}
+
+	/**
+	 * Maximum number of bytes to be encrypted at a time when SASL encryption is enabled.
+	 */
+	public int maxSaslEncryptedBlockSize() {
+		return Ints.checkedCast(conf.getLong("network.sasl.maxEncryptedBlockSize", 64  * 1024));
+	}
+
+	/**
+	 * Timeout for a single round trip of SASL token exchange, in milliseconds.
+	 */
+	public int saslTimeoutMS() {
+		return conf.getInt("network.sasl.timeout", 30) * 1000;
 	}
 }

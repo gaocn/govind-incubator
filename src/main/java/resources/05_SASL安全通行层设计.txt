@@ -3,34 +3,104 @@
 /|\     /|\      /|\
  |       |        |
 
-
-
---------------------------------------------------       --------------------------------------------------
-| TransportClientBootstrap                       |       | TransportServerBootstrap                       |
-| + void doBootstrap(TransportClient, Channel)   |       | + void doBootstrap(Channel, RpcHandler)        |
---------------------------------------------------       --------------------------------------------------
-
-
--------------------------------------------------        --------------------------------------------------
-| SaslClientBootstrap                           |        | SaslServerBootstrap                            |
-| + boolean getBoolean(String name, boolean due)|        | + boolean getBoolean(String name, booleanValue)|
----------+---------------------------------------        ---------+----------------------------------------
-
-
-
-
-SaslEncryption
-
-SaslEncryptionBackend
-
-
-SaslMessage
-
-SaslRpcHandler
-
-
-SecretKeyHolder
-
-SparkSaslClient implements SaslEncryptionBackend
-
-SparkSaslServer implements SaslEncryptionBackend
+        ------------------------------------------------        ---------------------------------------------
+        | TransportClientBootstrap                     |        | TransportServerBootstrap                  |
+        | + void doBootstrap(TranspotClient, Channel)  |        | + void doBootstrap(Channel, RpcHandler)   |
+        ---------------------*--------------------------        ----------------------*----------------------
+                            /|\                                                      /|\
+                             |                                                        |
+        -------------------------------------------------       ---------------------------------------------
+        | SaslClientBootstrap                           |       | SaslServerBootstrap                       |
+        | + String appId                                |       | + TransportConf conf                      |
+        | + boolean encrypt                             |       | + SecretKeyHolder secretKeyHolder         |
+        | + TransportConf conf                          |       ---------------------------------------------
+        | + SecretKeyHolder secretKeyHolder             |       | + void doBootstrap(Channel, RpcHandler)   |---
+        -------------------------------------------------       ---------------------------------------------  |
+ -------| + void doBootstrap(TranspotClient, Channel)   |                                                      |
+ |   |  -------------------------------------------------                                                      |
+ |   |                                                                                                         |
+ |   |                                                                                                         |
+ |   |                                                                                                         |
+ |   |   ----------------------------------      --------------------------------------------------            |
+ |   --->| AbstractMessage                |<--   | RpcHandler                                     |<------------
+ |       ----------------------------------  |   --------------------------------------------------
+ |       | SaslMessage                    |  |   | SaslRpcHandler                                 |
+ |       | + byte TAG_BYTE = (byte) 0xEA  |  |   | - Channel channel                              |
+ |       | + String appId                 |  |   | - TransportConf conf                           |
+ |       ----------------------------------  |   | - boolean isComplete                           |
+ |                                           |   | - RpcHandler delegate                          |
+ |                                           |   | - GovindSaslServer saslServer                  |
+ |                                           |   | - SecretKeyHolder secretKeyHolder              |
+ |                                           |   --------------------------------------------------
+ |                                           |   | + StreamManager getStreamManager()             |
+ |                                           |   | + void connectionTerminated(client)            |
+ |                                           |   | + void exceptionCaught(cause, client)          |
+ |                                           |   | + void receive(client, ByteBuffer)             |
+ |                                           ----| + void receive(client, ByteBuffer, RpcCallback)|---
+ |                                               --------------------------------------------------  |
+ |                                                                                                   |
+ |                        ----------------------------------------------------                       |
+ |                        | SaslEncryption                                   |                       |
+ |                        | + ENCRYPTION_HANDLER_NAME                        |                       |
+ |                        ----------------------------------------------------                       |
+ |                        | + addToChannel(ch, backend, maxOutboundBlockSize)|                       |
+ |                        ----------------------------------------------------                       |
+ |                            |                                      |                               |
+ |                           \|/                                    \|/                              |
+ |        -------------------------------------         -------------------------------------        |
+ |        | ChannelOutboundHandlerAdapter     |         | MessageToMessageDecoder<ByteBuf>  |        |
+ |        -----------------+-------------------         -----------------+-------------------        |
+ |                        /|\                                           /|\                          |
+ |                         |                                             |                           |
+ |        -------------------------------------         -------------------------------------        |
+ |        | EncryptionHandler                 |         | DecryptionHandler                 |        |
+ |        | - int maxOutboundBlockSize        |         | - SaslEncryptionBackend backend   |----    |
+ |        | - SaslEncryptionBackend backend   |---      -------------------------------------   |    |
+ |        -------------------------------------  |      | + decode(ctx, msg, out)           |   |    |
+ |     ---| + write(ctx, msg, promise)        |  |      -------------------------------------   |    |
+ |     |  -------------------------------------  |                                              |    |
+ |     |                                         |                                              |    |
+ |     |                                         |                                              |    |
+ |     |                                         |                                              |    |
+ |     |  -------------------------------------  |      -------------------------------------   |    |
+ |     |  |FileRegion                         |  ------>| SaslEncryptionBackend             |<---    |
+ |     |  |AbstractReferenceCounted           |         -------------------------------------        |
+ |     |  -------------------------------------         | + void  dispose()                 |        |
+ |     -->| EncryptedMessage                  |         | + byte[] wrap(data, offset, len)  |        |
+ |        -------------------------------------         | + byte[] unwrap(data, offset, len)|        |
+ |        | + void  dispose()                 |         -----*-----------------------*-------        |
+ |        | + byte[] wrap(data, offset, len)  |             /|\                     /|\              |
+ |        | + byte[] unwrap(data, offset, len)|              |                       |               |
+ |        -------------------------------------              |                       |               |
+ |                                                           |                       |               |
+ |                                                           |                       |               |
+ |                           --------------------------------|                       |               |
+ |                           |                                                       |               |
+ |         ---------------------------------------       ---------------------------------------     |
+ |-------->| GovindSaslClient                    |       | GovindSaslServer                    |<----|
+           ---------------------------------------       ---------------------------------------
+           | - String secretKeyId                |       | - String secretKeyId                |
+           | - String expectedQop                |       | - SaslServer saslServer             |
+           | - SaslClient saslClient             |       | - SecretKeyHolder secretKeyHolder   |
+           | - SecretKeyHolder secretKeyHolder   |       | + String DEFAULT_REALM = "default"  |
+           ---------------------------------------       | + String DIGEST = "DIGEST-MD5"      |
+           | + byte[] firstToken()               |       | + String QOP_AUTH_CONF = "auth-conf"|
+           | + boolean isComplete()              |       | + String QOP_AUTH = "auth"          |
+           | + byte[] response(byte[] token)     |       ---------------------------------------
+           | + Object getNegotiatedProperty(name)|       | + boolean isComplete()              |
+           | + void dispose()                    |       | + byte[] response(byte[] token)     |
+           | + byte[] wrap(data, offset, len)    |       | + Object getNegotiatedProperty(name)|
+           | + byte[] unwrap(data, offset, len)  |       | + void dispose()                    |
+           ---------------------------------------       | + byte[] wrap(data, offset, len)    |
+              |                                          | + byte[] unwrap(data, offset, len)  |
+              |                                          ---------------------------------------
+              |                                                                           |
+              |                                                                           |
+              |                ------------------------------------------------           |
+              |                | javax.security.auth.callback.CallbackHandler |           |
+              |                ----------*---------------------------*---------           |
+              |                         /|\                         /|\                   |
+              |                          |                           |                    |
+              |              -------------------------    -------------------------       |
+              |------------->| ClientCallbackHandler |    | DigestCallbackHandler |<------|
+                             -------------------------    -------------------------

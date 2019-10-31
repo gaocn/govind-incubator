@@ -18,8 +18,8 @@ import io.netty.channel.Channel;
 public interface TransportClientBootstrap {
 	/**
 	 * 在创建TransportClient实例时，调用doBootStrap对通道进行配置
-	 * @param client
-	 * @param channel
+	 * @param client 客户端
+	 * @param channel 客户端连接的且已打开的channel
 	 */
 	void doBootstrap(TransportClient client, Channel channel) throws RuntimeException;
 }

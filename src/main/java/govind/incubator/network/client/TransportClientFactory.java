@@ -1,5 +1,6 @@
 package govind.incubator.network.client;
 
+import com.google.common.base.Throwables;
 import com.google.common.io.Closeables;
 import govind.incubator.network.conf.TransportConf;
 import govind.incubator.network.handler.TransportChannelHandler;
@@ -199,12 +200,11 @@ public class TransportClientFactory implements Closeable {
 			for (TransportClientBootstrap bs : bootstraps) {
 				bs.doBootstrap(client, channel);
 			}
-		} catch (RuntimeException e) {
+		} catch (Exception e) {
 			long bootstrapTimeMs = (System.currentTimeMillis() - preBootstrap) / 1000;
-			log.error("Exception while bootstrapping client after {} ms, exception: ", bootstrapTimeMs, e.getMessage());
-
+			log.error("Exception while bootstrapping client after {} ms, exception: {}", bootstrapTimeMs, e.getMessage());
 			client.close();
-			throw new RuntimeException(e);
+			Throwables.propagate(e);
 		}
 
 		long postBootstrap = System.currentTimeMillis();

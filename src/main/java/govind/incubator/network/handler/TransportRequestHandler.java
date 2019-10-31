@@ -83,6 +83,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 				log.info("关闭StreamManger失败，原因：{}", e.getMessage());
 			}
 		}
+		rpcHandler.connectionTerminated(requestClient);
 	}
 
 	/***************** private method *********************/

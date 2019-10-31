@@ -1,9 +1,7 @@
 package govind.incubator.network.server;
 
 import com.google.common.io.Closeables;
-import govind.incubator.network.conf.MapConfigProvider;
 import govind.incubator.network.conf.TransportConf;
-import govind.incubator.network.handler.NoOpRpcHandler;
 import govind.incubator.network.handler.RpcHandler;
 import govind.incubator.network.util.IOMode;
 import govind.incubator.network.util.NettyUtil;
@@ -17,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -30,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 public class TransportServer implements Closeable {
 	private final TransportConf conf;
 	private final TransportContext context;
-	private final RpcHandler rpcHandler;
+	private final RpcHandler appRpcHandler;
 	private final List<TransportServerBootstrap> bootstraps;
 
 	private int  port = -1;
@@ -39,7 +36,7 @@ public class TransportServer implements Closeable {
 
 	public TransportServer(String hostToBind, int portToBind, TransportContext context, RpcHandler rpcHandler, List<TransportServerBootstrap> bootstraps) {
 		this.context = context;
-		this.rpcHandler = rpcHandler;
+		this.appRpcHandler = rpcHandler;
 		this.bootstraps = bootstraps;
 		this.port = portToBind;
 		this.conf = context.getConf();
@@ -82,8 +79,9 @@ public class TransportServer implements Closeable {
 		bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
 			@Override
 			protected void initChannel(SocketChannel ch) throws Exception {
+				RpcHandler rpcHandler = appRpcHandler;
 				for (TransportServerBootstrap  bootstrap : bootstraps) {
-					bootstrap.doBootstrap(ch, rpcHandler);
+					rpcHandler = bootstrap.doBootstrap(ch, rpcHandler);
 				}
 				context.initializePipeline(ch, rpcHandler);
 			}
