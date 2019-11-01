@@ -39,6 +39,7 @@ public class GovindSaslServer implements SaslEncryptionBackend {
 	 * This mechanism defines how HTTP Digest Authentication can
 	 * be used as a SASL mechanism.
 	 *
+	 * https://docs.oracle.com/javase/1.5.0/docs/guide/security/sasl/sasl-refguide.html
 	 */
 	public static final String DIGEST = "DIGEST-MD5";
 
