@@ -34,6 +34,11 @@ public class GovindSaslServer implements SaslEncryptionBackend {
 	/**
 	 * The authentication mechanism used here is DIGEST-MD5. This
 	 * could be changed to be configurable in the future.
+	 *
+	 * DIGEST-MD5 (RFC 2831)
+	 * This mechanism defines how HTTP Digest Authentication can
+	 * be used as a SASL mechanism.
+	 *
 	 */
 	public static final String DIGEST = "DIGEST-MD5";
 
