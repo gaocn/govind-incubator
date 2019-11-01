@@ -1,0 +1,137 @@
+
+Simple Authentication and Security Layer（SASL）
+    SASL is an Internet standard (RFC 2222) that specifies a protocol for authentication and optional establishment of a security layer between client and server applications. SASL defines how authentication data is to be exchanged but does not itself specify the contents of that data. It is a framework into which specific authentication mechanisms that specify the contents and semantics of the authentication data can fit.
+
+    SASL provides pluggable authentication and security layer for network applications.The Java SASL API defines classes and interfaces for applications that use SASL mechanisms.
+
+    SASL is a challenge-response protocol. The server issues a challenge to the client, and the client sends a response based on the challenge. This exchange continues until the server is satisfied and issues no further challenge. These challenges and responses are binary tokens of arbitrary length.
+
+    The Java SASL API is modeled according to this style of interaction and usage. It has interfaces, SaslClient and SaslServer, that represent client-side and server-side mechanisms, respectively. The application interacts with the mechanisms via byte arrays that represent the challenges and responses. The server-side mechanism iterates, issuing challenges and processing responses, until it is satisfied, while the client-side mechanism iterates, evaluating challenges and issuing responses, until the server is satisfied. The application that is using the mechanism drives each iteration. That is, it extracts the challenge or response from a protocol packet and supplies it to the mechanism, and then puts the response or challenge returned by the mechanism into a protocol packet and sends it to the peer.
+
+1、Creating the Mechanisms
+    The client and server code that uses the SASL mechanisms are not hardwired to use specific mechanism(s). In many protocols that use SASL, the server advertises (either statically or dynamically) a list of SASL mechanisms that it supports. The client then selects one of these based on its security requirements.
+<code>
+    String[] mechanisms = new String[]{"DIGEST-MD5", "PLAIN"};
+    SaslClient sc = Sasl.createSaslClient(
+                            mechanisms,
+                            authzid,
+                            protocol,
+                            serverName,
+                            props,
+                            callbackHandler);
+</code>
+    Based on the availability of the mechanisms supported by the platform and other configuration information provided via the parameters, the Java SASL framework selects one of the listed mechanisms and return an instance of SaslClient.
+    The name of the selected mechanism is usually transmitted to the server via the application protocol. Upon receiving the mechanism name, the server creates a corresponding SaslServer object to process client-sent responses.
+<code>
+    SaslServer ss = Sasl.createSaslServer(
+                            mechanism,
+                            protocol,
+                            myName,
+                            props,
+                            callbackHandler);
+</code>
+
+2、Passing Input to the Mechanisms
+    Because the Java SASL API is a general framework, it must be able to accommodate many different types of mechanisms. Each mechanism needs to be initialized with input and may need input to make progress. The API provides three means by which an application gives input to a mechanism.
+ (1)、Common input parameters. The application uses predefined parameters to supply information that are defined by the SASL specification and commonly required by mechanisms. For SASL client mechanisms, the input parameters are authorization id, protocol id, and server name. For SASL server mechanisms, the common input parameters are prototol id and (its own fully qualified) server name.
+
+ (2)、Properties parameter. The application uses the properties parameter, a mapping of property names to (possibly non-string) property values, to supply configuration information. The Java SASL API defines some standard properties, such as quality-of-protection, cipher strength, and maximum buffer size. The parameter can also be used to pass in non-standard properties that are specific to particular mechanisms.
+
+ (3)、Callbacks. The application uses the callback handler parameter to supply input that cannot be predetermined or might not be common across mechanisms. When a mechanism requires input data, it uses the callback handler supplied by the application to collect the data, possibly from the end-user of the application. For example, a mechanism might require the end-user of the application to supply a name and password.
+
+3、Using the Mechanisms
+    Once the application has created a mechanism, it uses the mechanism to obtain SASL tokens to exchange with the peer. The client typically indicates to the server via the application protocol which mechanism to use. Some protocols allows the client to accompany the request with an optional initial response for mechanisms that have an initial response. This feature can be used to lower the number of message exchanges required for authentication.
+<code>
+    // Get optional initial response
+    byte[] response = (sc.hasInitialResponse() ? sc.evaluateChallenge(new byte[]) : null);
+    String mechanism = sc.getName();
+
+    // Send selected mechanism name and optional initial response to server
+    send(mechanism, response);
+
+    // Read response
+    msg = receive();
+
+    while (!sc.isComplete() && (msg.status == CONTINUE || msg.status == SUCCESS)) {
+        // Evaluate server challenge
+        response = sc.evaluateChallenge(msg.contents);
+
+        if (msg.status == SUCCESS) {
+            // done; server doesn't expect any more SASL data
+            if (response != null) {
+                throw new IOException(
+                    "Protocol error: attempting to send response after completion");
+            }
+            break;
+        } else  {
+            send(mechanism, response);
+            msg = receive();
+        }
+    }
+</code>
+    The client application iterates through each step of the authentication by using the mechanism (sc) to evaluate the challenge gotten from the server and to get a response to send back to the server. It continues this cycle until either the mechanism or application-level protocol indicates that the authentication has completed, or if the mechanism cannot evaluate a challenge. If the mechanism cannot evaluate the challenge, it throws an exception to indicate the error and terminates the authentication. Disagreement between the mechanism and protocol about the completion state must be treated as an error because it might indicate a compromise of the authentication exchange.
+<code>
+    // Read request that contains mechanism name and optional initial response
+    msg.receive();
+
+    // Obtain a SaslServer to perform authentication
+    SaslServer ss = Sasl.createSaslServer(
+                            msg.mechanism,
+                            protocol,
+                            myName,
+                            props,
+                            callbackHandler);
+
+    // Perform authentication steps until done
+    while (!ss.isComplete()) {
+        try {
+            // Process response
+            byte[] challenge = sc.evaluateResponse(msg.contents);
+
+
+            if (ss.isComplete()) {
+                send(mechanism, challenge, SUCCESS);
+            } else {
+                send(mechanism, challenge, CONTINUE);
+                msg.receive();
+            }
+        } catch (SaslException e) {
+            send(ERROR);
+         	sc.dispose();
+         	break;
+        }
+    }
+</code>
+    The server application iterates through each step of the authentication by giving the client's response to the mechanism (ss) to process. If the response is incorrect, the mechanism indicates the error by throwing a SaslException so that the server can report the error and terminate the authentication. If the response is correct, the mechanism returns challenge data to be sent to the client and indicates whether the authentication is complete. Note that challenge data can accompany a "success" indication. This might be used, for example, to tell the client to finalize some negotiated state.
+
+
+4、Using the Negotiated Security Layer
+    Some SASL mechanisms support only authentication while others support use of a negotiated security layer after authentication. The security layer feature is often not used when the application uses some other means, such as SSL/TLS, to communicate securely with the peer.
+
+    When a security layer has been negotiated, all subsequent communication with the peer must take place using the security layer. To determine whether a security layer has been negotiated, get the negotiated quality-of-protection (QOP) from the mechanism. Here is an example of how to determine whether a security layer has been negotiated.
+<code>
+    String qop = (String) sc.getNegotiatedProperty(Sasl.QOP);
+    boolean hasSecurityLayer = (qop != null &&
+        (qop.equals("auth-int") || qop.equals("auth-conf")));
+</code>
+
+    A security layer has been negotiated if the Sasl.QOP property indicates that either integrity and/or confidentiality has been negotiated.
+
+    To communicate with the peer using the negotiated layer, the application first uses the wrap method to encode the data to be sent to the peer to produce a "wrapped" buffer. It then transfers a length field representing the number of octets in the wrapped buffer followed by the contents of the wrapped buffer to the peer. The peer receiving the stream of octets passes the buffer (without the length field) to unwrap to obtain the decoded bytes sent by the peer.
+<code>
+    // Send outgoing application data to peer
+    byte[] outgoing = ...;
+    byte[] netOut = sc.wrap(outgoing, 0, outgoing.length);
+
+    send(netOut.length, netOut);   // send to peer
+
+    // Receive incoming application data from peer
+    byte[] netIn = receive();      // read length and ensuing bytes from peer
+
+    byte[] incoming = sc.unwrap(netIn, 0, netIn.length);
+</code>
+
+
+
+
+
