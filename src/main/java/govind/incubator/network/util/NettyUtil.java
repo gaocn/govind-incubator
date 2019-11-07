@@ -163,7 +163,7 @@ public class NettyUtil {
 	public static void deleteRecursively(File file) throws IOException {
 		if (file == null){ return; }
 
-		if (file.isDirectory() && isSymlink(file)){
+		if (file.isDirectory() && !isSymlink(file)){
 			IOException savedException = null;
 			for (File child : listFiles(file)) {
 				try {

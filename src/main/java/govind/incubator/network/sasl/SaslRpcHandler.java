@@ -1,5 +1,6 @@
 package govind.incubator.network.sasl;
 
+import com.google.common.base.Throwables;
 import govind.incubator.network.client.TransportClient;
 import govind.incubator.network.conf.TransportConf;
 import govind.incubator.network.handler.RpcCallback;
@@ -95,6 +96,7 @@ public class SaslRpcHandler extends RpcHandler {
 			saslMessage = SaslMessage.decode(nettyBuf);
 		} catch (Exception e) {
 			nettyBuf.release();
+			throw e;
 		}
 
 		if (saslServer == null) {

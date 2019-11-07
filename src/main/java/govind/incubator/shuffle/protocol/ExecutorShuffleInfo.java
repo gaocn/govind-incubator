@@ -1,13 +1,13 @@
 package govind.incubator.shuffle.protocol;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Objects;
 import govind.incubator.network.protocol.Encodable;
 import govind.incubator.network.util.CodecUtil;
 import govind.incubator.network.util.CodecUtil.StringArray;
 import govind.incubator.network.util.CodecUtil.Strings;
 import io.netty.buffer.ByteBuf;
-import org.codehaus.jackson.annotate.JsonCreator;
-import org.codehaus.jackson.annotate.JsonProperty;
 
 import java.util.Arrays;
 

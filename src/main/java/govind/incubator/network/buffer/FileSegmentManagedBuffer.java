@@ -79,10 +79,11 @@ public class FileSegmentManagedBuffer extends ManagedBuffer{
 			} finally {
 				Closeables.closeQuietly(fis);
 			}
-		} finally {
+			throw new IOException("打开" + this + "时出错", e);
+		} catch (RuntimeException re) {
 			Closeables.closeQuietly(fis);
+			throw re;
 		}
-		return null;
 	}
 
 	@Override

@@ -106,7 +106,7 @@ public class TransportServer implements Closeable {
 	}
 
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		if (future != null) {
 			future.channel().close().awaitUninterruptibly(10, TimeUnit.SECONDS);
 		}
