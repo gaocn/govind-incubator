@@ -1,0 +1,161 @@
+继承     实现     关联
+ +       *
+/|\     /|\      /|\
+ |       |        |
+
+          --------------------------                               ---------------------------
+          | Encodable              |                            -->| enum Type               |
+          |  + int encodedLength() |                            |  |  + OPEN_BLOCK(0)        |
+          |  + void encode(ByteBuf)|                            |  |  + UPLOAD_BLOCK(1)      |
+          -----+----------------+---                            |  |  + REGISTER_EXECUTOR(2) |
+              /|\              /|\                              |  |  + STREAM_HANDLE(3)     |
+               |                |                               |  |  + REGISTER_DRIVER(4)   |
+               |                |                               |  ---------------------------
+               |                |                               |
+               |           -----------------------------------  |
+               |           | BlockTransferMessage            |  |
+               |           | + Type type()                   |---
+               |           | + ByteBuffer toByteBuffer()     |
+               |           -------+-----+-------+---------+---
+               |                 /|\   /|\     /|\       /|\
+               |                  |     |       |         |
+--------------------------------  |     |       |         |
+| ExecutorShuffleInfo          |  |     |       |         |
+| + String[] localDirs         |  |     |       |         |
+| + int subDirsPerLocalDir     |  |     |       |         |
+| + String shuffleManager      |  |     |       |         |
+--------------------------------  |     |       |         -----------------------
+   /|\                            |     |       |                               |
+    |                             |     |       |                               |
+    |    -----------------------------  |  -----------------------   -----------------------
+    |    | RegisterExecutor          |  |  | OpenBlock           |   | StreamHandle        |
+    |    | + String appId            |  |  | + String appId      |   | + long streamId     |
+    |    | + String execId           |  |  | + String execId     |   | + int numChunks     |
+    -----| + ExecutorShuffleInfo esi |  |  | + String[] blockIds |   -----------------------
+    |    -----------------------------  |  -----------------------
+    |                                   |
+    |    -----------------------------  |  -----------------------
+    |    | RegisterExecutor          |-----| UploadBlock         |
+    |    | + String appId            |     | + String appId      |
+    |    -----------------------------     | + String execId     |
+    |                                      | + String blockId    |
+    |                                      -----------------------
+    |
+    |
+    |         --------------------------------------------------------------
+    |         | ShuffleClient                                              |
+    |         |  + void init(String appId)                                 |
+    |         |  + void fetchBlocks(host, port, execId, blockIds, listener)|----
+    |         -------------------------------+------------------------------   |
+    |                                       /|\                                |
+    |                                        |                                 |
+    |                ---------------------------------------------             |
+    |                | ExternalShuffleClient                     |             |
+    |                |  - TransportConf conf                     |             |
+    |                |  - boolean saslEnabled                    |             |
+    |                |  - boolean saslEncryptionEnabled          |             |
+    |                |  - SecretKeyHolder secretKeyHolder        |             |
+    |                |  - TransportClientFactory clientFactory   |             |
+    |                |  - String appId                           |             |
+    |                ---------------------------------------------             |
+    |                |  + void registerWithShuffleServer(host,   |             |
+    -----------------|        port, execId, ExecutorShuffleInfo) |             |
+                     ---------------------------------------------             |
+                                                                               |
+                                                                               |
+                    -------------------------------------------------          |
+                    | BlockFetchingListener                         |<----------
+                    | + onBlockFetchSuccess(blockId, ManagedBuffer) |          |
+                    | + onBlockFetchFailure(blockId, Throwable)     |          |
+                    -------------------------------------------------          |
+                                                                               |
+                                                                               |
+                         ----------------------------------------     实现     |
+                         | BlockFetchStarter                    |<--------------
+                         | + createAndStart(blockIds, listener )|
+                         -----------------*----------------------
+                                         /|\ #
+                                          |  #
+                                          |  #
+                                          |  #   conf.maxRetries > 0
+                   ######################################################
+                   #                      |                             #
+                   #                      |                             #
+                  \#/                     |                            \#/
+----------------------------------------  |      ------------------------------------------------
+| OneForOneBlockFetcher                |  |      | RetryingBlockFetcher                         |
+| - String[] blockIds                  |  |      | + int maxRetries                             |
+| - TransportClient client             |  |      | + int retryCount                             |
+| - OpenBlocks openMessage             |  |      | + int retryWaitTime                          |
+| - BlockFetchingListener listener     |  |      | + ExecutorService executorService            |
+| - ChunkReceivedCallback callback     |  |      | + BlockFetchStarter fetchStarter             |
+|                                      |  |      | + BlockFetchingListener listener             |
+| - StreamHandle streamHandle          |  |      | + LinkedHashSet<String> outstandingBlocksIds |
+----------------------------------------  -------| + RetryingBlockFetchListener currentListener |
+| + void start()                       |         ------------------------------------------------
+| + void failRemainingBlock(ids, cause)|         | + void start()                               |
+----------------------------------------         | + void fetchAllOutstanding()                 |
+                                                 | + synchronized void initiateRetry()          |
+                                                 | + synchronized boolean shouldRetry(Throwable)|
+                                                 ------------------------------------------------
+
+
+
+
+                     ------------------------------------------------------
+                     | RpcHandler                                         |
+                     | + RpcCallback ONE_WAY_CALLBACK                     |
+                     |-----------------------------------------------------
+                     | + StreamManager getStreamManager()                 |
+                     | + connectionTerminated(TransportClient)            |
+                     | + exceptionCaught(Throwable, TransportClient)      |
+                     | + receive(TransportClient, ByteBuffer)             |
+                     | + receive(TransportClient, ByteBuffer, RpcCallback)|
+                     -----------------------+------------------------------
+                                           /|\
+                                            |
+                                            |
+                      --------------------------------------------------
+                      | ExternalShuffleBlockHandler                    |
+                      | - ExternalShuffleBlockResolver blockManager;   |------
+                      | - OneForOneStreamManager streamManager         |     |
+                      --------------------------------------------------     |
+                      | - void handleMessage(BlockTransferMessage,     |     |
+                      |          TransportClient, RpcCallback)         |     |
+                      | - void handleOpenBlock(client,                 |     |
+                      |          callback, OpenBlock)                  |     |
+                      | - void handleRegisterExecutor(client,          |     |
+                      |          callback, RegisterExecutor)           |     |
+                      | - void checkAuth(TransportClient, appId)       |     |
+                      | + void applicationRemoved(appId, delLocalDirs) |     |
+                      | + void close()                                 |     |
+                      --------------------------------------------------     |
+                                                                             |
+                                                                            \|/
+                   -------------------------------------------------------------
+                   | ExternalShuffleBlockResolver                              |
+                   | - String APP_KEY_PREFIX = "AppExecShuffleInfo"            |
+                   | - StoreVersion CURRENT_VERSION = new StoreVersion(1, 0)   |
+                   | - ObjectMapper mapper = new ObjectMapper()                |
+                   |                                                           |
+                   | - DB db                                                   |
+                   | - TransportConf conf                                      |
+                   | - Executor directoryCleaner                               |
+                   | - File registeredExecutorFile                             |
+                   | - ConcurrentMap<AppExecId, ExecutorShuffleInfo> executors |
+                   -------------------------------------------------------------
+                   | + void registerExecutor(appId, execId,ExecutorShuffleInfo)|
+                   | + applicationRemoved(appId, cleanupDirs)                  |
+                   | + ManagedBuffer getBlockData(appId, execId, blockId)      |
+                   | + File getFile(localDirs, subDirsPerLocalDir, filename)   |
+                   | + void close()                                            |
+                   | - void deleteExecutorDirs(String[] dirs)                  |
+                   | - ManagedBuffer getHashBasedShuffleBlockData(             |
+                   |         ExecutorShuffleInfo, blockId)                     |
+                   | - ManagedBuffer getSortBasedShuffleBlockData(             |
+                   |         ExecutorShuffleInfo, shuffleId, mapId, reduceId)  |
+                   | - ConcurrentMap<AppExecId, ExecutorShuffleInfo>           |
+                   |         reloadRegisteredExecutors(DB)                     |
+                   | - AppExecId parseDbAppExecKey(String key)                 |
+                   | - byte[] dbAppExecKey(AppExecId appExecId)                |
+                   -------------------------------------------------------------

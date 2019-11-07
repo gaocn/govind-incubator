@@ -1,6 +1,7 @@
 package govind.incubator.network.util;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import govind.incubator.network.protocol.codec.TransportFrameDecoder;
 import io.netty.buffer.PooledByteBufAllocator;
@@ -15,10 +16,13 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -144,5 +148,65 @@ public class NettyUtil {
 			buffer.get(data);
 			return data;
 		}
+	}
+
+	public static int nonnagetiveHash(String filename) {
+		int hashCode = filename.hashCode();
+		return hashCode > 0 ? hashCode : Math.abs(hashCode);
+	}
+
+	/**
+	 * 递归删除文件及文件夹中的文件，对于链接文件不跳转去删除。若删除失败
+	 * 则抛出异常。
+	 * @param file
+	 */
+	public static void deleteRecursively(File file) throws IOException {
+		if (file == null){ return; }
+
+		if (file.isDirectory() && !isSymlink(file)){
+			IOException savedException = null;
+			for (File child : listFiles(file)) {
+				try {
+					deleteRecursively(child);
+				} catch (IOException e) {
+					savedException = e;
+				}
+			}
+
+			if (savedException != null) {
+				throw savedException;
+			}
+		}
+
+		boolean deleted = file.delete();
+		if (!deleted && file.exists()) {
+			throw new IOException("删除文件失败：" + file.getAbsolutePath());
+		}
+	}
+
+	public static File[] listFiles(File file) throws IOException {
+		if (file.exists()) {
+			File[] files = file.listFiles();
+			if (files == null) {
+				throw new IOException("无法获取文件夹下"+ file + "的单文件");
+			}
+			return files;
+		} else {
+			return new  File[0];
+		}
+	}
+
+	/** 文件是不是链接文件 */
+	private static boolean isSymlink(File file) throws IOException {
+		Preconditions.checkNotNull(file);
+		File fileInCanonicalDir = null;
+
+		if (file.getParent() == null) {
+			fileInCanonicalDir = file;
+		} else  {
+			fileInCanonicalDir = new File(file.getParentFile().getCanonicalFile(), file.getName());
+		}
+
+		return !fileInCanonicalDir.getCanonicalFile().equals(fileInCanonicalDir.getAbsoluteFile());
 	}
 }

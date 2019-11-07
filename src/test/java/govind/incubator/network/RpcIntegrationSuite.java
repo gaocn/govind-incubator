@@ -144,7 +144,7 @@ public class RpcIntegrationSuite {
 
 	@Test
 	public void doubleTrouble() throws Exception {
-		RpcResult res = sendRpc("hello/Aaron", "throw error/OK");
+		RpcResult res = sendRpc("throw error/uh-oh", "throw error/OK");
 		assertTrue(res.successMessages.isEmpty());
 		assertErrorsContain(res.errorMessages, Sets.newHashSet("Thrown: uh-oh","Thrown: OK"));
 	}

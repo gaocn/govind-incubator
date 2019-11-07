@@ -1,5 +1,6 @@
 package govind.incubator.network.handler;
 
+import com.google.common.base.Throwables;
 import govind.incubator.network.inteceptor.StreamInteceptor;
 import govind.incubator.network.protocol.*;
 import govind.incubator.network.protocol.codec.TransportFrameDecoder;
@@ -209,14 +210,14 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 					log.debug("安装StreamInterceptor: {}", inteceptor);
 					streamActive = true;
 				} catch (Exception e) {
-					log.error("安装StreamInterceptor出错");
+					log.error("安装StreamInterceptor出错: {}", Throwables.getStackTraceAsString(e));
 					deactiveStream();
 				}
 			} else {
 				try {
 					callback.onComplete(resp.streamId);
 				} catch (IOException e) {
-					log.warn("流处理出错，调用onComplete方法时出错：{}", e.getMessage());
+					log.warn("流处理出错，调用onComplete方法时出错：{}", Throwables.getStackTraceAsString(e));
 				}
 			}
 		} else {
@@ -231,7 +232,7 @@ public class TransportResponseHandler extends MessageHandler<ResponseMessage> {
 			try {
 				callback.onFailure(resp.streamId, new RuntimeException(resp.error));
 			} catch (IOException e) {
-				log.warn("调用Stream的回调函数onFailure时出错：{}", e.getMessage());
+				log.warn("调用Stream的回调函数onFailure时出错：{}", Throwables.getStackTraceAsString(e));
 			}
 		} else {
 			log.error("流处理出错，没有找到对应的回调函数");

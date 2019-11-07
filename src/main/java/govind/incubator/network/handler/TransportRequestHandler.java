@@ -1,5 +1,6 @@
 package govind.incubator.network.handler;
 
+import com.google.common.base.Throwables;
 import govind.incubator.network.client.TransportClient;
 import govind.incubator.network.buffer.ManagedBuffer;
 import govind.incubator.network.buffer.NioManagedBuffer;
@@ -7,7 +8,6 @@ import govind.incubator.network.protocol.*;
 import io.netty.channel.Channel;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 
 
@@ -80,7 +80,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 			try {
 				streamManager.connectionTerminated(associatedChannel);
 			} catch (Exception e) {
-				log.info("关闭StreamManger失败，原因：{}", e.getMessage());
+				log.info("关闭StreamManger失败，原因：{}", Throwables.getStackTraceAsString(e));
 			}
 		}
 		rpcHandler.connectionTerminated(requestClient);
@@ -92,7 +92,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 		try {
 			rpcHandler.receive(requestClient, req.body().nioByteBuffer());
 		} catch (Exception e) {
-			log.error("RpcHandler处理One-Way-Message时出错：{}", e.getMessage());
+			log.error("RpcHandler处理One-Way-Message时出错：{}", Throwables.getStackTraceAsString(e));
 		} finally {
 			req.body().release();
 		}
@@ -108,12 +108,12 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 
 				@Override
 				public void onFailure(Throwable cause) {
-					respond(new RpcFailure(req.requestId, cause.getMessage()));
+					respond(new RpcFailure(req.requestId, Throwables.getStackTraceAsString(cause)));
 				}
 			});
 		} catch (Exception e) {
-			log.error("Rpc请求id为{}, RpcHandler处理RpcRequest时出错:{}", req.requestId, e.getMessage());
-			respond(new RpcFailure(req.requestId, e.getMessage()));
+			log.error("Rpc请求id为{}, RpcHandler处理RpcRequest时出错:{}", req.requestId, Throwables.getStackTraceAsString(e));
+			respond(new RpcFailure(req.requestId, Throwables.getStackTraceAsString(e)));
 		} finally {
 			req.body().release();
 		}
@@ -127,7 +127,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 			buffer = streamManager.openStream(req.streamId);
 		} catch (Exception e) {
 			log.error("为客户端{}打开流streamId={}出错：{}", clientAddr, req.streamId, e.getMessage());
-			respond(new StreamFailure(req.streamId, e.getMessage()));
+			respond(new StreamFailure(req.streamId, Throwables.getStackTraceAsString(e)));
 			return;
 		} finally {
 		}
@@ -146,7 +146,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 			buffer = streamManager.getChunk(req.streamChunkId.streamId, req.streamChunkId.chunkIdx);
 		} catch (Exception e) {
 			log.error("为来自{}的请求打开块{}失败：{}", clientAddr, req.streamChunkId, e.getMessage());
-			respond(new ChunkFetchFailure(req.streamChunkId, e.getMessage()));
+			respond(new ChunkFetchFailure(req.streamChunkId, Throwables.getStackTraceAsString(e)));
 			return;
 		}
 		respond(new ChunkFetchSuccess(buffer, req.streamChunkId));
@@ -165,7 +165,7 @@ public class TransportRequestHandler extends MessageHandler<RequestMessage> {
 					if (future.isSuccess()) {
 						log.info("成功给客户端{}发送消息{}", clientAddr, resp);
 					} else {
-						log.error("给客户端{}发送消息失败: {}，将关闭连接", clientAddr, future.cause().getMessage());
+						log.error("给客户端{}发送消息失败: {}", clientAddr, Throwables.getStackTraceAsString(future.cause()));
 						associatedChannel.close();
 					}
 				});

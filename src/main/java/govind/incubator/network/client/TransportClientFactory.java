@@ -179,7 +179,7 @@ public class TransportClientFactory implements Closeable {
 			}
 		});
 
-		long preConnect = System.currentTimeMillis();
+		long preConnect = System.nanoTime();
 		ChannelFuture future = bootstrap.connect(address);
 
 		if (!future.awaitUninterruptibly(conf.connectionTimeoutMS())) {
@@ -193,7 +193,7 @@ public class TransportClientFactory implements Closeable {
 		assert client != null : "channel future成功连接，但是TransportClient为null！";
 
 		//在返回TransportClient之前，为每个client执行bootstraps装配操作
-		long preBootstrap = System.currentTimeMillis();
+		long preBootstrap = System.nanoTime();
 		log.info("成功连接{}, 开始为TransportClient装配bootstraps....", address);
 
 		try {
@@ -201,15 +201,15 @@ public class TransportClientFactory implements Closeable {
 				bs.doBootstrap(client, channel);
 			}
 		} catch (Exception e) {
-			long bootstrapTimeMs = (System.currentTimeMillis() - preBootstrap) / 1000;
+			long bootstrapTimeMs = (System.nanoTime() - preBootstrap) / 1000000;
 			log.error("Exception while bootstrapping client after {} ms, exception: {}", bootstrapTimeMs, e.getMessage());
 			client.close();
 			Throwables.propagate(e);
 		}
 
-		long postBootstrap = System.currentTimeMillis();
-		log.info("成功创建到{}的连接，总耗时：{}ms，其中bootstraps耗时：{}", address,
-				(postBootstrap- preConnect)/1000, (postBootstrap - preBootstrap)/1000);
+		long postBootstrap = System.nanoTime();
+		log.info("成功创建到{}的连接，总耗时：{}ms，其中bootstraps耗时：{}ms", address,
+				(postBootstrap- preConnect)/1000000, (postBootstrap - preBootstrap)/1000000);
 		return client;
 	}
 

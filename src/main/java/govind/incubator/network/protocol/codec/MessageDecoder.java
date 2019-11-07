@@ -22,7 +22,6 @@ public class MessageDecoder extends MessageToMessageDecoder<ByteBuf> {
 		Type type = Type.decode(buf);
 		Message decodedMsg = decode(buf, type);
 
-		log.info("接收{}类型的消息：{}", type, decodedMsg);
 		out.add(decodedMsg);
 	}
 

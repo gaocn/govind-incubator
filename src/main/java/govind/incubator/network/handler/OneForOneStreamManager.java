@@ -53,7 +53,7 @@ public class OneForOneStreamManager extends StreamManager{
 
 	public OneForOneStreamManager() {
 		nextStreamId = new AtomicLong(
-				new Random().nextInt(Integer.MAX_VALUE)*1000
+				new Random().nextInt(Integer.MAX_VALUE)*1000L
 		);
 		streams = new ConcurrentHashMap<>();
 	}
