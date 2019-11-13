@@ -1,0 +1,216 @@
+继承     实现     关联    * 抽象方法
+ +       *              + 公有域、公有方法
+/|\     /|\      /|\    - 私有域、私有方法
+ |       |        |
+
+          --------------------------------------------------------
+          | CommandBuilder                                       |
+          |  + String appName                                    |
+          |  + boolean verbose                                   |
+          |  + String deployMode                                 |
+          |  + String javaHome                                   |
+          |  + String mainClass                                  |
+          |  + List<String> appArgs                              |
+          |  + List<String> jars                                 |
+          |  + List<String> files                                |
+          |  + Map<String, String> childEnv                      |
+          |  + Map<String, String> conf                          |
+          |  + Map<String, String> effectiveConfig               |
+          |  + String propertiesFile                             |
+          --------------------------------------------------------
+          |  * List<String> buildCommand(Map<String, String> env)|
+          |  - List<String> buildJavaCommoand(extraClassPath)    |
+          |  - List<String> buildClassPath(appClassPath)         |
+          |  - Properties loadPropertiesFile()                   |
+          |  - Map<String, String> getEffectiveConfig()          |
+          |  + void addToClassPath(List<String> cp, String )     |
+          |  + void addOptionString(List<String> cmd, String )   |
+          ----------+-----------------------------------+---------
+                   /|\                                 /|\
+                    |                                   |
+                    |                                   |
+      ------------------------------    -----------------------------------------
+      | GovindClassCommandBuilder  | -->| GovindSubmitCommandBuilder            |
+      |  + String className        | |  |  + List<String> sparkArgs             |----
+      |  + List<String> classArgs  | |  |  + boolean printInfo                  |   |
+      ------------------------------ |  -----------------------------------------   |
+   --------------------------------- |  |  - List<String> buildSparkSubmitArgs()|   |
+   |                                    -----------------------------------------   |
+   |                                                                                |
+   |                                                                                |
+   |                 ----------------------------------------                       |
+   |                 | GovindSubmitOptionParser             |                       |
+   |                 |  - String[][] options                |                       |
+   |                 |  - String[][] switches               |                       |
+   |                 ----------------------------------------                       |
+   |                 |  * boolean handle(opt, value)        |                       |
+   |                 |  * boolean handleUnknown(opt)        |                       |
+   |                 |  * void handleExtraArgs(List<String>)|                       |
+   |                 |  - void parse(List<String> args)     |                       |
+   |                 ------------------+---------------------                       |
+   |                                  /|\                                           |
+   |                                   |                                            |
+   |                 ---------------------------------------- 内部类                 |
+   |                 | DefaultGovindSubmitOptionParser      |<-----------------------
+   |                 |  + boolean infoRequeted = false      |
+   |                 ----------------------------------------
+   |      -------------------------------------------------
+   |      | GovindLauncher                                |
+   |      |  - Map<String, String> launcherConfig         |
+   |------|  - GovindSubmitCommandBuilder builder         |
+          -------------------------------------------------
+          |  + Process launch()                           |
+          |  - ProcessBuilder createBuilder()             |
+      ----|  + GovindAppHandle startApplication(          |
+      |   |        GovindAppHandle.Listener... listeners) |--------
+      |   -------------------------------------------------       |
+      |                                                           |
+      |内部类                                                      |
+      |   ----------------------                                  |
+      --->| ArgumetnValidator  |                                  |
+      |   ----------------------                                  |
+      |                                                           |
+      |   ----------------------                                  |
+      |   | State              |                                  |
+      |   | + UNKNOWN(false)   |                                  |
+      |   | + CONNECTED(false) |                                  |
+      |   | + SUBMITTED(false) |                                  |
+      |   | + RUNNING(false)   |                                 \|/
+      |   | + FINISHED(true)   |     -----------------------------------------------
+      |   | + FAILED(true)     |     | Listener                                    |<--
+      |   | + KILLED(true)     |     | + void stateChanged(GovindAppHandle handle) |  |
+      |   | - boolean isFinal  |     | + Cvoid infoChanged(GovindAppHandle handle) |  |
+      |   ----------------------     -----------------------------------------------  |
+      |                  /|\                          /|\                         -----
+      |                   |静态内部类           静态内部类|                          |
+      |                   |                            |                          |
+      |              ------------------------------------------                   |
+      -------------->| GovindAppHandle                        |                   |
+                     |  + void stop()                         |                   |
+                     |  + void kill()                         |                   |
+                     |  + State getState()                    |                   |
+                     |  + String getAppId()                   |                   |
+                     |  + void disconnect()                   |                   |
+                     |  + void addListener(Listener listener) |                   |
+                     --------------------+---------------------                   |
+                                        /|\                                       |
+                                         |                                        |
+                                         |                                        |
+              -----------------------------------------------------               |
+ ------------>| ChildProcAppHandle                                |               |
+ |    --------|  - static ThreadFactory REDIRECT_FACTORY          |               |
+ |    |       |       = new NamedThreadFactory("launcher-proc-%d")|               |
+ |    |       |  - final String secrect                           |               |
+ |  ----------|  - final LauncherServer server                    |               |
+ |  | |       |                                                   |               |
+ |  | |       |  - boolean disposed                               |               |
+ |  | |       |  - Process childProc                              |               |
+ |  | |       |  - State state                                    |               |
+ |  | |       |  - String appId                                   |               |
+ |  | |       |  - List<Listener> listeners                       |----------------
+ |  | |       |  - OutputRedirector redirector                    |----------------
+ |  ----------|  - LauncherConnection connection                  |               |
+ |  | |       -----------------------------------------------------               |
+ |  | |       |  + String getSecrect()                            |               |
+ |  | |       |  + LauncherServer getServer()                     |               |
+ |  | |       |  + LauncherConnection getConnection()             |               |
+ |  | |       |  + setChildProc(childProc, loggerName)            |               |
+ |  | |       |  + void setConnection(LauncherConnection)         |               |
+ |  | |       |  + void setState(State s)                         |               |
+ |  | |       |  + void setAppId(String appId)                    |               |
+ |  | |       |  - synchronized void fireEvent(isInfoChanged)     |               |
+ |  | |       -----------------------------------------------------               |
+ |  | |   ----------------------------------     ------------------------------   |
+ |  | --->| ThreadFactory                  |     | OutputRedirector           |<---
+ |  |     | + Thread newThread(Runnable r) |     |                            |
+ |  |     ---------------+------------------     | - volatile boolean active  |
+ |  |                   /|\                      | - Logger sink              |
+ |  |                    |                       | - Thread thread            |
+ |  |     ----------------------------------     | - BufferedReader reader    |
+ |  |     | NamedThreadFactory             |     ------------------------------
+ |  |     |  + String nameFormat           |     | + void stop()              |
+ |  |     |  + AtomicInteger threadIds     |     | + void redirect()          |
+ |  |     ----------------------------------     ------------------------------
+ |  |                         ----------------------------------
+ |  |                         | LauncherProtocol               |
+ |  |                         |  + String ENV_LAUNCHER_PORT    |
+ |  |                         |       "_SPARK_LAUNCHER_PORT"   |
+ |  |                         |  + String ENV_LAUNCHER_SECRET  |
+ |  |                         |       "_SPARK_LAUNCHER_SECRET" |
+ |  |                         ----------------------------------
+ |  |                                         |
+ |  |                                         |静态内部类
+ |  |                                 -----------------
+ |  |                                 | Serializable  |
+ |  |                                 -----------------
+ |  | ------------------------------->| Message       |
+ |  | |                               --------+--------
+ |  | |                                      /|\
+ |  | |                                       |
+ |  | |             -----------------------------------------------------------
+ |  | |             |                    |                   |                |
+ |  | |             |                    |                   |                |
+ |  | |   --------------------  ------------------  ------------------ ---------------
+ |  | |   | Hello            |  | SetAppId       |  | SetState       | | StopMessage |
+ |  | |   | + String secret  |  | + String appId |  | + State state  | ---------------
+ |  | |   | + String version |  ------------------  ------------------
+ |  | |   --------------------
+ |  | |                    -------------------------------------
+ |  | |                    | Closeable, Runnable               |
+ |  | |                    -------------------------------------
+ |  --|--------------------| LauncherConnection                |
+ |  | |                    |  - Socket client                  |
+ |  | |                    |  - ObjectOutputStream out         |
+ |  | |                    |  - volatile boolean closed        |
+ |  | |                    -------------------------------------
+ |  | ---------------------|  + abstract void handle(Message)  |
+ |  | |                    |  + synchronized void send(Message)|
+ |  | |                    |  + void run()                     |
+ |  | |                    |  + void close()                   |
+ |  | |                    -----------------+-------------------
+ |  | |                                    /|\
+ |  | |                                     |
+ |  | |                    -------------------------------------
+ |  | |                    | ServerConnection                  |<---------------
+ |  | |                    |  - TimerTask timeout              |               |
+ |  | |                    |  - ChildProcAppHandle handle      |               |
+ |  | |                    -------------------------------------               |
+ |  | ---------------------|  + override void handle(Message)  |               |
+ |  |                      |  + override void close()          |               |
+ |  |                      -------------------------------------               |
+ |  |           ------------------------------------------------------------   |
+ |  |           | Closeable                                                |   |
+ |  |           ------------------------------------------------------------   |
+ |  ------------| LauncherServer                                           |   |
+ |              |  - static String THREAD_NAME_FMT = "LauncherServer-%d"   |   |
+ |              |  - static long DEFAULT_CONNECT_TIMEOUT = 10000L          |   |
+ |              |  - static SecureRandom RND = new SecureRandom()          |   |
+ |              |                                                          |   |
+ |              |  - static volatile LauncherServer serverInstance         |   |
+ |              |                                                          |   |
+ |              |  - final AtomicLong refCnt                               |   |
+ |              |  - final AtomicLong threadIds                            |   |
+ |              |  - final ServerSocket server                             |   |
+ |              |  - final Thread serverThread                             |   |
+ |              |  - final ThreadFactory factory                           |   |
+ |              |  - final Timer timeoutTimer                              |   |
+ |              |  - final List<ServerConnection> clients                  |----
+ ---------------|  -final ConcurrentMap<String, ChildProcAppHandle> pending|
+                |                                                          |
+                |  - volatile boolean running                              |
+                ------------------------------------------------------------
+                |  + static LauncherServer getServerInstance()             |
+                |  + static synchronized ChildProcAppHandle newAppHandler()|
+                |                                                          |
+                |  + void ref()                                            |
+                |  + void close()                                          |
+                |  + void unRef()                                          |
+                |  + int getPort()                                         |
+                |  + void unregister(ChildProcAppHandle handle)            |
+                |  + ChildProcAppHandle newAppHandle(String secret)        |
+                |  - String createSecret()                                 |
+                |  - void acceptConnections()                              |
+                |  - long getConnectionTimeout()                           |
+                ------------------------------------------------------------
+
+

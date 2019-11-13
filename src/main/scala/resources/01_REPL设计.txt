@@ -1,0 +1,4 @@
+为什么Scala有内置REPL，Spark也需要自己的REPL(Read Evaluation Print Loop)？
+因为创建的类对象在Scala REPL中会直接执行，而Spark框架需要对类进行加工后才能执行（而不是直接创建对象），是lazy级别的，可以对类进行优化调度，另一个原因是命令不是本地运行而是在集群中运行与Scala中REPL中不同。Scala中的REPL每一次执行都会被封装成对象，然后对对象进行编译生成字节码，由于类加载器加载后去执行，与Spark的REPL需求不同。
+
+
